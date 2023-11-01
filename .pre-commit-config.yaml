@@ -19,3 +19,11 @@ repos:
     - id: mixed-line-ending
     - id: check-executables-have-shebangs
     - id: check-shebang-scripts-are-executable
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: ''  # Use the sha / tag you want to point at
+    hooks:
+    -   id: mypy
+      # I like to run in strict mode usually but we can only do it after we have
+      # type annotations consistently everywhere. We should later add:
+      #args: [--strict, --ignore-missing-imports]
+      # second is default that needs to be reproduced with explicitly given args
