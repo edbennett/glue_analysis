@@ -24,3 +24,6 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/edbennett/glue_analysis"
 "Bug Tracker" = "https://github.com/edbennett/glue_analysis/issues"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "UP", "SIM", "I"]

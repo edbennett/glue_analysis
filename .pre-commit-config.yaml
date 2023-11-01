@@ -4,7 +4,7 @@ repos:
   hooks:
     - id: ruff
       # Lint rules suggested by ruff docs, just for starters:
-      args: ['--select=E,F,B,UP,SIM,I', --fix]
+      args: [--fix]
     - id: ruff-format
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.5.0
