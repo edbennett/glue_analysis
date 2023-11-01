@@ -1,15 +1,11 @@
 repos:
-# Run the Ruff linter.
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  # Ruff version.
   rev: v0.1.3
   hooks:
-    # Run the Ruff linter.
     - id: ruff
-    # Run the Ruff formatter.
     - id: ruff-format
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.5.0
   hooks:
     - id: check-yaml
     - id: end-of-file-fixer
@@ -20,7 +16,7 @@ repos:
     - id: check-executables-have-shebangs
     - id: check-shebang-scripts-are-executable
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: ''  # Use the sha / tag you want to point at
+    rev: 'v1.6.1'
     hooks:
     -   id: mypy
       # I like to run in strict mode usually but we can only do it after we have
@@ -28,7 +24,7 @@ repos:
       #args: [--strict, --ignore-missing-imports]
       # second is default that needs to be reproduced with explicitly given args
 - repo: https://github.com/jumanjihouse/pre-commit-hooks
-  rev: master  # or specific git tag
+  rev: 3.0.0
   hooks:
-    - id: markdownlint # Configure in .mdlrc
+    - id: markdownlint
       files: "content/"
