@@ -6,6 +6,7 @@ import pandas as pd
 
 from ..correlator import CorrelatorEnsemble
 
+
 @lru_cache(maxsize=8)
 def read_correlators_fortran(filename, channel="", vev_filename=None, metadata=None):
     correlators = CorrelatorEnsemble(filename)

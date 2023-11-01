@@ -48,7 +48,13 @@ class CorrelatorEnsemble:
 
         for op_idx in range(1, self.num_ops + 1):
             for bin_idx in range(1, self.num_bins + 1):
-                if sum((self.vevs.Op_index == op_idx) & (self.vevs.Bin_index == bin_idx)) != 1:
+                if (
+                    sum(
+                        (self.vevs.Op_index == op_idx)
+                        & (self.vevs.Bin_index == bin_idx)
+                    )
+                    != 1
+                ):
                     logging.warning(f"Missing {op_idx=}, {bin_idx=} in vevs")
                     return False
 
@@ -83,22 +89,6 @@ class CorrelatorEnsemble:
             logging.warning("Total length not consistent")
             return False
 
-        # for op_idx1 in range(1, len(ops) + 1):
-            # for op_idx2 in range(1, len(ops) + 1):
-            #     print(f"{op_idx1=}, {op_idx2=}")
-            #     for bin_idx in range(1, num_bins + 1):
-            #         for t_idx in range(1, NT + 1):
-            #             if sum(
-            #                     (self.correlators.Op_index1 == op_idx1)
-            #                     & (self.correlators.Op_index2 == op_idx2)
-            #                     & (self.correlators.Bin_index == bin_idx)
-            #                     & (self.correlators.Time == t_idx)
-            #             ) != 1:
-            #                 logging.warning(
-            #                     f"Inconsistent data for {op_idx1=}, {op_idx2=}, {bin_idx=}, {t_idx=}"
-            #                 )
-            #                 return False
-
         if self.vevs is not None and not self.has_consistent_vevs:
             return False
 
@@ -107,8 +97,12 @@ class CorrelatorEnsemble:
     def get_numpy(self):
         if not self.is_consistent:
             raise ValueError("Data are inconsistent.")
-        sorted_correlators = self.correlators.sort_values(by=["Bin_index", "Time", "Op_index1", "Op_index2"])
-        return sorted_correlators.Correlation.values.reshape(self.num_bins, self.NT, self.num_ops, self.num_ops)
+        sorted_correlators = self.correlators.sort_values(
+            by=["Bin_index", "Time", "Op_index1", "Op_index2"]
+        )
+        return sorted_correlators.Correlation.values.reshape(
+            self.num_bins, self.NT, self.num_ops, self.num_ops
+        )
 
     def get_numpy_vevs(self):
         if not self.is_consistent:
@@ -123,21 +117,23 @@ class CorrelatorEnsemble:
         array = self.get_numpy()
         if subtract:
             vevs = self.get_numpy_vevs()
-            vev_matrix = vevs[:, :, np.newaxis] * vevs[:, np.newaxis, :] / self.NT ** 2
+            vev_matrix = vevs[:, :, np.newaxis] * vevs[:, np.newaxis, :] / self.NT**2
         else:
             vev_matrix = np.zeros((self.num_bins, self.num_ops, self.num_ops))
             # array -= vev_matrix * vev_matrix.swapaxes(2, 3) / self.NT ** 2
 
-        correlation_covariances = np.asarray([
+        correlation_covariances = np.asarray(
             [
                 [
-                    pe.Obs([array[:, t_idx, op_idx1, op_idx2]], ["glue_bins"])
-                    - pe.Obs([vev_matrix[:, op_idx1, op_idx2]], ["glue_bins"])
-                    for op_idx2 in range(self.num_ops)
+                    [
+                        pe.Obs([array[:, t_idx, op_idx1, op_idx2]], ["glue_bins"])
+                        - pe.Obs([vev_matrix[:, op_idx1, op_idx2]], ["glue_bins"])
+                        for op_idx2 in range(self.num_ops)
+                    ]
+                    for op_idx1 in range(self.num_ops)
                 ]
-                for op_idx1 in range(self.num_ops)
+                for t_idx in range(self.NT)
             ]
-            for t_idx in range(self.NT)
-        ])
+        )
 
         return pe.Corr(correlation_covariances)
