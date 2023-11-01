@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from functools import lru_cache
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -12,8 +12,8 @@ from ..correlator import CorrelatorEnsemble
 def read_correlators_fortran(
     filename: str,
     channel: str = "",
-    vev_filename: Optional[str] = None,
-    metadata: Optional[dict[str, Any]] = None,
+    vev_filename: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.correlators = pd.read_csv(filename, delim_whitespace=True)

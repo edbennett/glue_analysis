@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 import pandas as pd
@@ -18,23 +18,23 @@ class CorrelatorEnsemble:
     vevs: pd.DataFrame
     metadata: dict[str, Any]
 
-    def __init__(self, filename: str) -> None:
+    def __init__(self: Self, filename: str) -> None:
         self.filename = filename
 
     @property
-    def NT(self) -> int:
+    def NT(self: Self) -> int:
         return max(self.correlators.Time)
 
     @property
-    def num_ops(self) -> int:
+    def num_ops(self: Self) -> int:
         return max(self.correlators.Op_index1)
 
     @property
-    def num_bins(self) -> int:
+    def num_bins(self: Self) -> int:
         return max(self.correlators.Bin_index)
 
     @property
-    def has_consistent_vevs(self) -> bool:
+    def has_consistent_vevs(self: Self) -> bool:
         if max(self.vevs.Op_index) != self.num_ops:
             logging.warning("Wrong number of operators in vevs")
             return False
@@ -63,7 +63,7 @@ class CorrelatorEnsemble:
         return True
 
     @property
-    def is_consistent(self) -> bool:
+    def is_consistent(self: Self) -> bool:
         if not self._frozen:
             raise ValueError("Data must be frozen to check consistency.")
         if max(self.correlators.Op_index2) != self.num_ops:
@@ -96,7 +96,7 @@ class CorrelatorEnsemble:
 
         return True
 
-    def get_numpy(self) -> np.array:
+    def get_numpy(self: Self) -> np.array:
         if not self.is_consistent:
             raise ValueError("Data are inconsistent.")
         sorted_correlators = self.correlators.sort_values(
@@ -106,13 +106,13 @@ class CorrelatorEnsemble:
             self.num_bins, self.NT, self.num_ops, self.num_ops
         )
 
-    def get_numpy_vevs(self) -> np.array:
+    def get_numpy_vevs(self: Self) -> np.array:
         if not self.is_consistent:
             raise ValueError("Data are inconsistent")
         sorted_vevs = self.vevs.sort_values(by=["Bin_index", "Op_index"])
         return sorted_vevs.Vac_exp.values.reshape(self.num_bins, self.num_ops)
 
-    def get_pyerrors(self, subtract: bool = False) -> pe.Corr:
+    def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
         if subtract and (self.vevs is None):
             raise ValueError("Can't subtract vevs that have not been read.")
 
