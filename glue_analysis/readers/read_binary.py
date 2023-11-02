@@ -59,13 +59,16 @@ def _assemble_metadata(
 
 
 def _read_header(corr_file: BinaryIO) -> dict[str, int]:
-    return {
+    header = {
         name: int(val)
         for name, val in zip(
             HEADER_NAMES,
+            # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
             np.frombuffer(
                 corr_file.read(len(HEADER_NAMES) * SIZE_OF_FLOAT), dtype=np.float64
             ),
             strict=True,
         )
     }
+    corr_file.seek(0)
+    return header
