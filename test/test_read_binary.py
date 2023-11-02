@@ -19,7 +19,7 @@ def filename() -> str:
 
 @pytest.fixture()
 def header() -> dict[str, int]:
-    return {name: i for i, name in enumerate(HEADER_NAMES)}
+    return {name: i + 1 for i, name in enumerate(HEADER_NAMES)}
 
 
 def create_corr_file(header: dict[str, int]) -> BytesIO:
@@ -94,5 +94,15 @@ def test_read_correlators_binary_raises_on_conflicting_metadata(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
     metadata = {HEADER_NAMES[0]: "conflict with header info"}
+    with pytest.raises(ParsingError):
+        _read_correlators_binary(corr_file, filename, metadata=metadata)
+
+
+def test_read_correlators_binary_raises_on_any_doubly_specified_metadata(
+    corr_file: BinaryIO, filename: str, header: dict[str, int]
+) -> None:
+    metadata = {
+        HEADER_NAMES[0]: header[HEADER_NAMES[0]]  # same as header but still forbidden
+    }
     with pytest.raises(ParsingError):
         _read_correlators_binary(corr_file, filename, metadata=metadata)
