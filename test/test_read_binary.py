@@ -5,7 +5,11 @@ from typing import BinaryIO
 import numpy as np
 import pytest
 
-from glue_analysis.readers.read_binary import HEADER_NAMES, _read_correlators_binary
+from glue_analysis.readers.read_binary import (
+    HEADER_NAMES,
+    ParsingError,
+    _read_correlators_binary,
+)
 
 
 @pytest.fixture()
@@ -84,3 +88,11 @@ def test_read_correlators_binary_merges_header_with_metadata(
     metadata = {"some": "metadata"}
     answer = _read_correlators_binary(corr_file, filename, metadata=metadata)
     assert answer.metadata == header | metadata
+
+
+def test_read_correlators_binary_raises_on_conflicting_metadata(
+    corr_file: BinaryIO, filename: str, header: dict[str, int]
+) -> None:
+    metadata = {HEADER_NAMES[0]: "conflict with header info"}
+    with pytest.raises(ParsingError):
+        _read_correlators_binary(corr_file, filename, metadata=metadata)

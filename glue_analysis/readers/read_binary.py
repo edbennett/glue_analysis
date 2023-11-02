@@ -9,6 +9,10 @@ HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
 
 
+class ParsingError(Exception):
+    pass
+
+
 def read_correlators_binary(
     corr_filename: str,
     channel: str = "",
@@ -35,7 +39,14 @@ def _read_correlators_binary(
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
-    correlators.metadata = _read_header(corr_file) | (metadata if metadata else {})
+    correlators.metadata = _read_header(corr_file)
+    if metadata:
+        if conflicting_keys := [key for key in metadata if key in HEADER_NAMES]:
+            raise ParsingError(
+                f"Metadata contains the keys {conflicting_keys} "
+                "which are supposed to be read from the header."
+            )
+        correlators.metadata |= metadata
     correlators._frozen = True
     return correlators
 
