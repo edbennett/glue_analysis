@@ -76,3 +76,11 @@ def test_read_correlators_binary_makes_metadata_from_header_rising(
     corr_file = create_corr_file(header)
     answer = _read_correlators_binary(corr_file, filename)
     assert answer.metadata == header
+
+
+def test_read_correlators_binary_merges_header_with_metadata(
+    corr_file: BinaryIO, filename: str, header: dict[str, int]
+) -> None:
+    metadata = {"some": "metadata"}
+    answer = _read_correlators_binary(corr_file, filename, metadata=metadata)
+    assert answer.metadata == header | metadata

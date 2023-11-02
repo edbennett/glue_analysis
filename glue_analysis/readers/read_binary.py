@@ -35,7 +35,7 @@ def _read_correlators_binary(
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
-    correlators.metadata = _read_header(corr_file)
+    correlators.metadata = _read_header(corr_file) | (metadata if metadata else {})
     correlators._frozen = True
     return correlators
 
