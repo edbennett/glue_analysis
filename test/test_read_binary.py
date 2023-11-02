@@ -91,7 +91,7 @@ def test_read_correlators_binary_merges_header_with_metadata(
 
 
 def test_read_correlators_binary_raises_on_conflicting_metadata(
-    corr_file: BinaryIO, filename: str, header: dict[str, int]
+    corr_file: BinaryIO, filename: str
 ) -> None:
     metadata = {HEADER_NAMES[0]: "conflict with header info"}
     with pytest.raises(ParsingError):
