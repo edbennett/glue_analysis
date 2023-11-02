@@ -110,3 +110,13 @@ def test_read_correlators_fortran_preserves_data_in_vev(
     vev_file = copy(full_file)
     answer = _read_correlators_fortran(full_file, filename, vev_file=vev_file)
     assert (answer.vevs.drop("channel", axis=1).values == data).all()
+
+
+# documenting current behavior, might want to be revisited
+def test_read_correlators_fortran_does_not_check_consistency_of_given_data(
+    full_file: TextIO, filename: str, data: list[str]
+) -> None:
+    vev_file = copy(full_file)
+    vev_file.readline()  # now column names and shape are different
+    _read_correlators_fortran(full_file, filename, vev_file=vev_file)
+    # if we reach this point, it hasn't complained and test has passed
