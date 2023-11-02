@@ -30,10 +30,13 @@ def data(columns: list[str]) -> np.array:
 
 
 @pytest.fixture()
-def corr_file(columns: list[str], data: np.array) -> StringIO:
+def full_file(columns: list[str], data: np.array) -> StringIO:
     memory_file = StringIO()
     np.savetxt(memory_file, data)
     memory_file.seek(0)
+    # This is not exactly the format that is used in the example data I've got
+    # but it seems to be close enough for the current implementation not to
+    # complain. Might need a better approximation at some point.
     return StringIO(" ".join(columns) + "\n" + memory_file.read())
 
 
@@ -87,14 +90,14 @@ def test_read_correlators_fortran_passes_on_metadata(
 
 
 def test_read_correlators_fortran_preserves_column_names(
-    corr_file: TextIO, filename: str, columns: list[str]
+    full_file: TextIO, filename: str, columns: list[str]
 ) -> None:
-    answer = _read_correlators_fortran(corr_file, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert set(answer.correlators.columns) == set(columns + ["channel"])
 
 
 def test_read_correlators_fortran_preserves_data(
-    corr_file: TextIO, filename: str, data: list[str]
+    full_file: TextIO, filename: str, data: list[str]
 ) -> None:
-    answer = _read_correlators_fortran(corr_file, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert (answer.correlators.drop("channel", axis=1).values == data).all()
