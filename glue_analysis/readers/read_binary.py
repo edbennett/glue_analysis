@@ -29,4 +29,5 @@ def _read_correlators_binary(
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
+    correlators._frozen = True
     return correlators
