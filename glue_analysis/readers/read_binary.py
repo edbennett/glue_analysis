@@ -39,16 +39,23 @@ def _read_correlators_binary(
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
-    correlators.metadata = _read_header(corr_file)
+    correlators.metadata = _assemble_metadata(corr_file, metadata)
+    correlators._frozen = True
+    return correlators
+
+
+def _assemble_metadata(
+    corr_file: BinaryIO, metadata: dict[str, Any] | None
+) -> dict[str, Any]:
+    final_metadata = _read_header(corr_file)
     if metadata:
         if conflicting_keys := [key for key in metadata if key in HEADER_NAMES]:
             raise ParsingError(
                 f"Metadata contains the keys {conflicting_keys} "
                 "which are supposed to be read from the header."
             )
-        correlators.metadata |= metadata
-    correlators._frozen = True
-    return correlators
+        final_metadata |= metadata
+    return final_metadata
 
 
 def _read_header(corr_file: BinaryIO) -> dict[str, int]:
