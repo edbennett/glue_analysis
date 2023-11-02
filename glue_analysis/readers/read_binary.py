@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from typing import Any, BinaryIO
 
 from ..correlator import CorrelatorEnsemble
