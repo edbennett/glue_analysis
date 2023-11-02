@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from copy import copy
 from io import StringIO
 from typing import TextIO
 
@@ -101,3 +102,11 @@ def test_read_correlators_fortran_preserves_data(
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
     assert (answer.correlators.drop("channel", axis=1).values == data).all()
+
+
+def test_read_correlators_fortran_preserves_data_in_vev(
+    full_file: TextIO, filename: str, data: list[str]
+) -> None:
+    vev_file = copy(full_file)
+    answer = _read_correlators_fortran(full_file, filename, vev_file=vev_file)
+    assert (answer.vevs.drop("channel", axis=1).values == data).all()
