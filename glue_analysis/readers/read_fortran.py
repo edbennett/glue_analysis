@@ -10,14 +10,20 @@ from ..correlator import CorrelatorEnsemble
 
 @lru_cache(maxsize=8)
 def read_correlators_fortran(
-    filename: str,
+    corr_filename: str,
     channel: str = "",
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
-    with open(filename) as corr_file, open(filename) as vev_file:
+    with open(corr_filename) as corr_file:
+        if vev_filename:
+            with open(vev_filename) as vev_file:
+                return _read_correlators_fortran(
+                    corr_file, corr_filename, channel, vev_file, metadata
+                )
+
         return _read_correlators_fortran(
-            corr_file, filename, channel, vev_file, metadata
+            corr_file, corr_filename, channel, None, metadata
         )
 
 
