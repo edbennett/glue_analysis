@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 from typing import Any, BinaryIO
 
+import numpy as np
+
 from ..correlator import CorrelatorEnsemble
 
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
+SIZE_OF_FLOAT = 8
 
 
 def read_correlators_binary(
@@ -32,6 +35,19 @@ def _read_correlators_binary(
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
-    correlators.metadata = {name: 1 for name in HEADER_NAMES}
+    correlators.metadata = _read_header(corr_file)
     correlators._frozen = True
     return correlators
+
+
+def _read_header(corr_file: BinaryIO) -> dict[str, int]:
+    return {
+        name: int(val)
+        for name, val in zip(
+            HEADER_NAMES,
+            np.frombuffer(
+                corr_file.read(len(HEADER_NAMES) * SIZE_OF_FLOAT), dtype=np.float64
+            ),
+            strict=True,
+        )
+    }

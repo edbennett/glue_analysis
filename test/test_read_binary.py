@@ -14,11 +14,6 @@ def filename() -> str:
 
 
 @pytest.fixture()
-def trivial_file() -> BytesIO:
-    return BytesIO()
-
-
-@pytest.fixture()
 def header() -> dict[str, int]:
     return {name: i for i, name in enumerate(HEADER_NAMES)}
 
@@ -42,23 +37,23 @@ def corr_file(header: dict[str, int]) -> BytesIO:
 
 
 def test_read_correlators_binary_records_filename(
-    trivial_file: BinaryIO, filename: str
+    corr_file: BinaryIO, filename: str
 ) -> None:
-    answer = _read_correlators_binary(trivial_file, filename)
+    answer = _read_correlators_binary(corr_file, filename)
     assert answer.filename == filename
 
 
 def test_read_correlators_binary_does_not_create_vev_if_not_given(
-    trivial_file: BinaryIO, filename: str
+    corr_file: BinaryIO, filename: str
 ) -> None:
-    answer = _read_correlators_binary(trivial_file, filename)
+    answer = _read_correlators_binary(corr_file, filename)
     assert "vevs" not in dir(answer)
 
 
 def test_read_correlators_binary_freezes_the_ensemble(
-    trivial_file: BinaryIO, filename: str
+    corr_file: BinaryIO, filename: str
 ) -> None:
-    answer = _read_correlators_binary(trivial_file, filename)
+    answer = _read_correlators_binary(corr_file, filename)
     assert answer._frozen
 
 
@@ -69,6 +64,15 @@ def test_read_correlators_binary_makes_metadata_from_header_constant(
     filename: str,
 ) -> None:
     header = {name: 1 for name in HEADER_NAMES}
+    corr_file = create_corr_file(header)
+    answer = _read_correlators_binary(corr_file, filename)
+    assert answer.metadata == header
+
+
+def test_read_correlators_binary_makes_metadata_from_header_rising(
+    filename: str,
+) -> None:
+    header = {name: i for i, name in enumerate(HEADER_NAMES)}
     corr_file = create_corr_file(header)
     answer = _read_correlators_binary(corr_file, filename)
     assert answer.metadata == header
