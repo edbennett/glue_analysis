@@ -43,7 +43,7 @@ def trivial_vevs() -> pd.DataFrame:
         {
             "Bin_index": np.arange(10, dtype=np.float64),
             "Op_index": np.arange(10, dtype=np.float64),
-            "Vac_exp": np.arange(10, dtype=np.float64),
+            "Vac_exp": np.ones(10, dtype=np.float64),
         }
     )
 
@@ -53,7 +53,7 @@ def create_vev_file(vevs: pd.DataFrame) -> BytesIO:
     memory_file.write(
         np.array([1 for name in HEADER_NAMES], dtype=np.float64).tobytes()
     )
-    memory_file.write(vevs["Vac_exp"].values.tobytes())
+    memory_file.write(np.asarray(vevs["Vac_exp"].values, dtype=np.float64).tobytes())
     memory_file.seek(0)
     return memory_file
 
@@ -137,6 +137,16 @@ def test_read_correlators_binary_raises_on_any_doubly_specified_metadata(
 def test_read_correlators_binary_reads_trivial_vev(
     corr_file: BinaryIO, filename: str, trivial_vevs: pd.DataFrame
 ) -> None:
+    answer = _read_correlators_binary(
+        corr_file, filename, vev_file=create_vev_file(trivial_vevs)
+    )
+    assert (answer.vevs == trivial_vevs).all().all()
+
+
+def test_read_correlators_binary_reads_linear_vevs(
+    corr_file: BinaryIO, filename: str, trivial_vevs: pd.DataFrame
+) -> None:
+    trivial_vevs["Vac_exp"] = range(trivial_vevs.shape[0])
     answer = _read_correlators_binary(
         corr_file, filename, vev_file=create_vev_file(trivial_vevs)
     )

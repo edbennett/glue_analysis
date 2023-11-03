@@ -8,6 +8,7 @@ from ..correlator import CorrelatorEnsemble
 
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
+HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
 
 
 class ParsingError(Exception):
@@ -67,9 +68,7 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
         for name, val in zip(
             HEADER_NAMES,
             # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
-            np.frombuffer(
-                corr_file.read(len(HEADER_NAMES) * SIZE_OF_FLOAT), dtype=np.float64
-            ),
+            np.frombuffer(corr_file.read(HEADER_LENGTH), dtype=np.float64),
             strict=True,
         )
     }
@@ -78,10 +77,13 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
 
 
 def _read_vevs(vev_file: BinaryIO, metadata: dict[str, Any] | None) -> pd.DataFrame:
-    return pd.DataFrame(
+    vev_file.seek(HEADER_LENGTH)
+    vevs = pd.DataFrame(
         {
             "Bin_index": np.arange(10, dtype=np.float64),
             "Op_index": np.arange(10, dtype=np.float64),
-            "Vac_exp": np.arange(10, dtype=np.float64),
+            "Vac_exp": np.frombuffer(vev_file.read(), dtype=np.float64),
         }
     )
+    vev_file.seek(0)
+    return vevs
