@@ -42,7 +42,8 @@ def trivial_vevs() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "Bin_index": np.arange(10, dtype=np.float64),
-            "Op_index": np.arange(10, dtype=np.float64),
+            "Operator_index": np.ones(10, dtype=np.float64),
+            "Blocking_index": np.ones(10, dtype=np.float64),
             "Vac_exp": np.ones(10, dtype=np.float64),
         }
     )

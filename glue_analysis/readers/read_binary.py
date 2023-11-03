@@ -81,7 +81,8 @@ def _read_vevs(vev_file: BinaryIO, metadata: dict[str, Any] | None) -> pd.DataFr
     vevs = pd.DataFrame(
         {
             "Bin_index": np.arange(10, dtype=np.float64),
-            "Op_index": np.arange(10, dtype=np.float64),
+            "Operator_index": np.ones(10, dtype=np.float64),
+            "Blocking_index": np.ones(10, dtype=np.float64),
             "Vac_exp": np.frombuffer(vev_file.read(), dtype=np.float64),
         }
     )
