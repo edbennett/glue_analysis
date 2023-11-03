@@ -8,7 +8,7 @@ version = "0.0.1"
 authors = [{name="Ed Bennett", email="e.j.bennett@swansea.ac.uk"}]
 description = "A wrapper for pyerrors to analyse specific classes of glueball data."
 readme = "README.md"
-requires-python = ">= 3.9"
+requires-python = ">= 3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -24,3 +24,6 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/edbennett/glue_analysis"
 "Bug Tracker" = "https://github.com/edbennett/glue_analysis/issues"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "UP", "SIM", "I", "ANN"]

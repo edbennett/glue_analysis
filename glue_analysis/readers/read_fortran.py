@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 
 from functools import lru_cache
+from typing import Any
 
 import pandas as pd
 
 from ..correlator import CorrelatorEnsemble
 
+
 @lru_cache(maxsize=8)
-def read_correlators_fortran(filename, channel="", vev_filename=None, metadata=None):
+def read_correlators_fortran(
+    filename: str,
+    channel: str = "",
+    vev_filename: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.correlators = pd.read_csv(filename, delim_whitespace=True)
     correlators.correlators["channel"] = channel

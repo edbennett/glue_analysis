@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import  matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+
 from glue_analysis.readers.read_fortran import read_correlators_fortran
 
 correlators = read_correlators_fortran(
@@ -27,7 +28,7 @@ for subtract in True, False:
         m,
         yerr=m_err,
         label=f"Vacuum {'not ' if not subtract else ''}subtracted",
-        fmt="." if subtract else "x"
+        fmt="." if subtract else "x",
     )
 
 ax.set_ylim(-0.05, 0.75)
