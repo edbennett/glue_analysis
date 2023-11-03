@@ -6,6 +6,15 @@ import pandas as pd
 
 from ..correlator import CorrelatorEnsemble
 
+CORRELATOR_COLUMNS = [
+    "Time",
+    "Bin_Index",
+    "Op_index1",
+    "Op_index2",
+    "Blocking_index1",
+    "Blocking_index2",
+    "glue_bins",
+]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
 HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT

@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from glue_analysis.readers.read_binary import (
+    CORRELATOR_COLUMNS,
     HEADER_NAMES,
     ParsingError,
     _read_correlators_binary,
@@ -152,3 +153,15 @@ def test_read_correlators_binary_reads_linear_vevs(
         corr_file, filename, vev_file=create_vev_file(trivial_vevs)
     )
     assert (answer.vevs == trivial_vevs).all().all()
+
+
+#### Correlators
+
+
+def test_read_correlators_binary_has_correct_columns(
+    corr_file: BinaryIO, filename: str, trivial_vevs: pd.DataFrame
+) -> None:
+    answer = _read_correlators_binary(
+        corr_file, filename, vev_file=create_vev_file(trivial_vevs)
+    )
+    assert set(answer.correlators.columns) == set(CORRELATOR_COLUMNS)
