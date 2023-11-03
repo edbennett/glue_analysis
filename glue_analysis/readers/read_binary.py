@@ -6,14 +6,15 @@ import pandas as pd
 
 from ..correlator import CorrelatorEnsemble
 
-CORRELATOR_INDEXING_COLUMNS = [
-    "Bin_Index",
-    "Time",
-    "Op_index1",
-    "Blocking_index1",
-    "Op_index2",
-    "Blocking_index2",
-]
+LENGTH_OF_CORRELATOR_INDEXING = {
+    "Bin_Index": lambda header: header["Nbin"],
+    "Blocking_index2": lambda header: header["Nbl"],
+    "Op_index2": lambda header: header["Nop"],
+    "Blocking_index1": lambda header: header["Nbl"],
+    "Op_index1": lambda header: header["Nop"],
+    "Time": lambda header: int(header["LT"] / 2 + 1),
+}
+CORRELATOR_INDEXING_COLUMNS = list(LENGTH_OF_CORRELATOR_INDEXING.keys())
 CORRELATOR_COLUMNS = CORRELATOR_INDEXING_COLUMNS + ["glue_bins"]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
@@ -113,12 +114,8 @@ def _columns_from_header(header: dict[str, int]) -> pd.DataFrame:
     return (
         pd.MultiIndex.from_product(
             [
-                range(1, header["Nbin"] + 1),  # Bin_index
-                range(1, header["LT"] + 1),  # Time
-                range(1, header["Nop"] + 1),  # Op_index1
-                range(1, header["Nbl"] + 1),  # Blocking_index1
-                range(1, header["Nop"] + 1),  # Op_index2
-                range(1, header["Nbl"] + 1),  # Blocking_index2
+                range(1, length(header) + 1)
+                for length in LENGTH_OF_CORRELATOR_INDEXING.values()
             ],
             names=CORRELATOR_INDEXING_COLUMNS,
         )

@@ -30,11 +30,11 @@ def columns_from_header(header: dict[str, int]) -> pd.DataFrame:
         pd.MultiIndex.from_product(
             [
                 range(1, header["Nbin"] + 1),  # Bin_index
-                range(1, header["LT"] + 1),  # Time
-                range(1, header["Nop"] + 1),  # Op_index1
                 range(1, header["Nbl"] + 1),  # Blocking_index1
-                range(1, header["Nop"] + 1),  # Op_index2
+                range(1, header["Nop"] + 1),  # Op_index1
                 range(1, header["Nbl"] + 1),  # Blocking_index2
+                range(1, header["Nop"] + 1),  # Op_index2
+                range(1, int(header["LT"] / 2 + 1) + 1),  # Time
             ],
             names=CORRELATOR_INDEXING_COLUMNS,
         )
@@ -197,12 +197,6 @@ def test_read_correlators_binary_has_correct_columns(
 def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
-    # This is not a good test as `[_]columns_from_header` are identical functions
-    # in functional code and test. But it's hard to test because the
-    # combinatorics of the problem would either require lots of hardcoded tests
-    # of subcases or a really big explicit matrix somewhere and neither is
-    # helpful, I believe. Maybe parametrisation could get us somewhere.
-    # Anyhow, this test at least will signal a change in behavior if it occurs.
     answer = _read_correlators_binary(corr_file, filename)
     assert (
         (answer.correlators[CORRELATOR_INDEXING_COLUMNS] == columns_from_header(header))
