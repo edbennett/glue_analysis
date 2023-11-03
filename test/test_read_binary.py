@@ -191,7 +191,7 @@ def test_read_correlators_binary_has_correct_columns(
     corr_file: BinaryIO, filename: str
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
-    assert set(answer.correlators.columns) == set(CORRELATOR_COLUMNS)
+    assert (answer.correlators.columns == CORRELATOR_COLUMNS).all()
 
 
 def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
