@@ -2,6 +2,7 @@
 from typing import Any, BinaryIO
 
 import numpy as np
+import pandas as pd
 
 from ..correlator import CorrelatorEnsemble
 
@@ -40,6 +41,8 @@ def _read_correlators_binary(
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
+    if vev_file:
+        correlators.vevs = _read_vevs(vev_file, metadata)
     correlators._frozen = True
     return correlators
 
@@ -72,3 +75,13 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
     }
     corr_file.seek(0)
     return header
+
+
+def _read_vevs(vev_file: BinaryIO, metadata: dict[str, Any] | None) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "Bin_index": np.arange(10, dtype=np.float64),
+            "Op_index": np.arange(10, dtype=np.float64),
+            "Vac_exp": np.arange(10, dtype=np.float64),
+        }
+    )

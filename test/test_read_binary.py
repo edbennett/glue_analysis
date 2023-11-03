@@ -3,6 +3,7 @@ from io import BytesIO
 from typing import BinaryIO
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from glue_analysis.readers.read_binary import (
@@ -28,13 +29,33 @@ def create_corr_file(header: dict[str, int]) -> BytesIO:
         np.array([header[name] for name in HEADER_NAMES], dtype=np.float64).tobytes()
     )
     memory_file.seek(0)
-
     return memory_file
 
 
 @pytest.fixture()
 def corr_file(header: dict[str, int]) -> BytesIO:
     return create_corr_file(header)
+
+
+@pytest.fixture()
+def trivial_vevs() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "Bin_index": np.arange(10, dtype=np.float64),
+            "Op_index": np.arange(10, dtype=np.float64),
+            "Vac_exp": np.arange(10, dtype=np.float64),
+        }
+    )
+
+
+def create_vev_file(vevs: pd.DataFrame) -> BytesIO:
+    memory_file = BytesIO()
+    memory_file.write(
+        np.array([1 for name in HEADER_NAMES], dtype=np.float64).tobytes()
+    )
+    memory_file.write(vevs["Vac_exp"].values.tobytes())
+    memory_file.seek(0)
+    return memory_file
 
 
 ### Trivial behavior
@@ -62,6 +83,8 @@ def test_read_correlators_binary_freezes_the_ensemble(
 
 
 ### Actually functional behavior
+
+#### Metadata
 
 
 def test_read_correlators_binary_makes_metadata_from_header_constant(
@@ -106,3 +129,15 @@ def test_read_correlators_binary_raises_on_any_doubly_specified_metadata(
     }
     with pytest.raises(ParsingError):
         _read_correlators_binary(corr_file, filename, metadata=metadata)
+
+
+#### VEVs
+
+
+def test_read_correlators_binary_reads_trivial_vev(
+    corr_file: BinaryIO, filename: str, trivial_vevs: pd.DataFrame
+) -> None:
+    answer = _read_correlators_binary(
+        corr_file, filename, vev_file=create_vev_file(trivial_vevs)
+    )
+    assert (answer.vevs == trivial_vevs).all().all()
