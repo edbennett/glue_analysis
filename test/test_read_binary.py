@@ -8,6 +8,7 @@ import pytest
 
 from glue_analysis.readers.read_binary import (
     CORRELATOR_COLUMNS,
+    CORRELATOR_INDEXING_COLUMNS,
     HEADER_NAMES,
     ParsingError,
     _read_correlators_binary,
@@ -22,6 +23,24 @@ def filename() -> str:
 @pytest.fixture()
 def header() -> dict[str, int]:
     return {name: i + 1 for i, name in enumerate(HEADER_NAMES)}
+
+
+def columns_from_header(header: dict[str, int]) -> pd.DataFrame:
+    return (
+        pd.MultiIndex.from_product(
+            [
+                range(1, header["Nbin"] + 1),  # Bin_index
+                range(1, header["LT"] + 1),  # Time
+                range(1, header["Nop"] + 1),  # Op_index1
+                range(1, header["Nbl"] + 1),  # Blocking_index1
+                range(1, header["Nop"] + 1),  # Op_index2
+                range(1, header["Nbl"] + 1),  # Blocking_index2
+            ],
+            names=CORRELATOR_INDEXING_COLUMNS,
+        )
+        .to_frame()
+        .reset_index(drop=True)
+    )
 
 
 def create_corr_file(header: dict[str, int]) -> BytesIO:
@@ -159,9 +178,24 @@ def test_read_correlators_binary_reads_linear_vevs(
 
 
 def test_read_correlators_binary_has_correct_columns(
-    corr_file: BinaryIO, filename: str, trivial_vevs: pd.DataFrame
+    corr_file: BinaryIO, filename: str
 ) -> None:
-    answer = _read_correlators_binary(
-        corr_file, filename, vev_file=create_vev_file(trivial_vevs)
-    )
+    answer = _read_correlators_binary(corr_file, filename)
     assert set(answer.correlators.columns) == set(CORRELATOR_COLUMNS)
+
+
+def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
+    corr_file: BinaryIO, filename: str, header: dict[str, int]
+) -> None:
+    # This is not a good test as `[_]columns_from_header` are identical functions
+    # in functional code and test. But it's hard to test because the
+    # combinatorics of the problem would either require lots of hardcoded tests
+    # of subcases or a really big explicit matrix somewhere and neither is
+    # helpful, I believe. Maybe parametrisation could get us somewhere.
+    # Anyhow, this test at least will signal a change in behavior if it occurs.
+    answer = _read_correlators_binary(corr_file, filename)
+    assert (
+        (answer.correlators[CORRELATOR_INDEXING_COLUMNS] == columns_from_header(header))
+        .all()
+        .all()
+    )

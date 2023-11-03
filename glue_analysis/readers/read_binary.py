@@ -6,15 +6,15 @@ import pandas as pd
 
 from ..correlator import CorrelatorEnsemble
 
-CORRELATOR_COLUMNS = [
-    "Time",
+CORRELATOR_INDEXING_COLUMNS = [
     "Bin_Index",
+    "Time",
     "Op_index1",
-    "Op_index2",
     "Blocking_index1",
+    "Op_index2",
     "Blocking_index2",
-    "glue_bins",
 ]
+CORRELATOR_COLUMNS = CORRELATOR_INDEXING_COLUMNS + ["glue_bins"]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
 HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
@@ -51,6 +51,8 @@ def _read_correlators_binary(
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
+    correlators.correlators = _columns_from_header(correlators.metadata)
+    correlators.correlators["glue_bins"] = np.nan
     if vev_file:
         correlators.vevs = _read_vevs(vev_file, metadata)
     correlators._frozen = True
@@ -97,3 +99,21 @@ def _read_vevs(vev_file: BinaryIO, metadata: dict[str, Any] | None) -> pd.DataFr
     )
     vev_file.seek(0)
     return vevs
+
+
+def _columns_from_header(header: dict[str, int]) -> pd.DataFrame:
+    return (
+        pd.MultiIndex.from_product(
+            [
+                range(1, header["Nbin"] + 1),  # Bin_index
+                range(1, header["LT"] + 1),  # Time
+                range(1, header["Nop"] + 1),  # Op_index1
+                range(1, header["Nbl"] + 1),  # Blocking_index1
+                range(1, header["Nop"] + 1),  # Op_index2
+                range(1, header["Nbl"] + 1),  # Blocking_index2
+            ],
+            names=CORRELATOR_INDEXING_COLUMNS,
+        )
+        .to_frame()
+        .reset_index(drop=True)
+    )
