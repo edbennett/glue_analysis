@@ -43,18 +43,28 @@ def columns_from_header(header: dict[str, int]) -> pd.DataFrame:
     )
 
 
-def create_corr_file(header: dict[str, int]) -> BytesIO:
+def create_data(header: dict[str, int]) -> np.array:
+    return np.random.random(columns_from_header(header).shape[0])
+
+
+@pytest.fixture()
+def data(header: dict[str, int]) -> np.array:
+    return create_data(header)
+
+
+def create_corr_file(header: dict[str, int], data: np.array) -> BytesIO:
     memory_file = BytesIO()
     memory_file.write(
         np.array([header[name] for name in HEADER_NAMES], dtype=np.float64).tobytes()
     )
+    memory_file.write(data.tobytes())
     memory_file.seek(0)
     return memory_file
 
 
 @pytest.fixture()
-def corr_file(header: dict[str, int]) -> BytesIO:
-    return create_corr_file(header)
+def corr_file(header: dict[str, int], data: np.array) -> BytesIO:
+    return create_corr_file(header, data)
 
 
 @pytest.fixture()
@@ -112,7 +122,7 @@ def test_read_correlators_binary_makes_metadata_from_header_constant(
     filename: str,
 ) -> None:
     header = {name: 1 for name in HEADER_NAMES}
-    corr_file = create_corr_file(header)
+    corr_file = create_corr_file(header, create_data(header))
     answer = _read_correlators_binary(corr_file, filename)
     assert answer.metadata == header
 
@@ -121,7 +131,7 @@ def test_read_correlators_binary_makes_metadata_from_header_rising(
     filename: str,
 ) -> None:
     header = {name: i for i, name in enumerate(HEADER_NAMES)}
-    corr_file = create_corr_file(header)
+    corr_file = create_corr_file(header, create_data(header))
     answer = _read_correlators_binary(corr_file, filename)
     assert answer.metadata == header
 
@@ -199,3 +209,10 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
         .all()
         .all()
     )
+
+
+def test_read_correlators_binary_preserves_data(
+    corr_file: BinaryIO, filename: str, data: np.array
+) -> None:
+    answer = _read_correlators_binary(corr_file, filename)
+    assert (answer.correlators["glue_bins"] == data).all()

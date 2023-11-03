@@ -52,7 +52,11 @@ def _read_correlators_binary(
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
     correlators.correlators = _columns_from_header(correlators.metadata)
-    correlators.correlators["glue_bins"] = np.nan
+    corr_file.seek(HEADER_LENGTH)
+    correlators.correlators["glue_bins"] = np.frombuffer(
+        corr_file.read(), dtype=np.float64
+    )
+    corr_file.seek(0)
     if vev_file:
         correlators.vevs = _read_vevs(vev_file, metadata)
     correlators._frozen = True
