@@ -51,15 +51,19 @@ def _read_correlators_binary(
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
-    correlators.correlators = _columns_from_header(correlators.metadata)
-    corr_file.seek(HEADER_LENGTH)
-    correlators.correlators["glue_bins"] = np.frombuffer(
-        corr_file.read(), dtype=np.float64
-    )
-    corr_file.seek(0)
+    correlators.correlators = _read_correlators(corr_file, correlators.metadata)
     if vev_file:
         correlators.vevs = _read_vevs(vev_file, metadata)
     correlators._frozen = True
+    return correlators
+
+
+def _read_correlators(corr_file: BinaryIO, header: dict[str, int]) -> pd.DataFrame:
+    corr_file.seek(HEADER_LENGTH)
+    correlators = _columns_from_header(header).assign(
+        glue_bins=np.frombuffer(corr_file.read(), dtype=np.float64)
+    )
+    corr_file.seek(0)
     return correlators
 
 
