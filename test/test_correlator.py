@@ -75,14 +75,17 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
     # reaching this point means it didn't raise
 
 
-def test_correlator_ensemble_reports_correct_NT(
-    corr_ensemble: CorrelatorEnsemble,
+@pytest.mark.parametrize(
+    "prop,value",
+    [("NT", LENGTH_TIME), ("num_ops", LENGTH_OP_INDEX), ("num_bins", LENGTH_BIN_INDEX)],
+    ids=["NT", "num_ops", "num_bins"],
+)
+def test_correlator_ensemble_reports_correct_properties(
+    corr_ensemble: CorrelatorEnsemble, prop: str, value: int
 ) -> None:
-    assert corr_ensemble.NT == LENGTH_TIME
-
-
-def test_correlator_ensemble_reports_correct_NT_on_scrambled(
-    corr_ensemble: CorrelatorEnsemble,
-) -> None:
+    assert getattr(corr_ensemble, prop) == value
+    # The following violates One-assert-per-test rule but significantly
+    # outweighs that on DRY.
+    # Scramble as a second test:
     corr_ensemble.correlators = corr_ensemble.correlators.sample(frac=1)
-    assert corr_ensemble.NT == LENGTH_TIME
+    assert getattr(corr_ensemble, prop) == value
