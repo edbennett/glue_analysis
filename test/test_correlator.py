@@ -3,7 +3,7 @@ import pytest
 
 from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
 
-LENGTH_BIN_INDEX = 1
+LENGTH_BIN_INDEX = 5  # needs at least 5 or pe.Corr complains
 LENGTH_TIME = 2
 LENGTH_OP_INDEX = 3
 CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_BIN_INDEX * LENGTH_OP_INDEX**2
@@ -173,3 +173,15 @@ def test_correlator_ensemble_raises_for_subtract_without_vevs_present(
     del corr_ensemble.vevs
     with pytest.raises(ValueError):
         corr_ensemble.get_pyerrors(subtract=True)
+
+
+def test_correlator_ensemble_returned_correlator_has_correct_averages(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    corr = corr_ensemble.get_pyerrors()
+    corr_np = corr_ensemble.get_numpy().mean(axis=0)  # average over MC time
+    for i in range(LENGTH_OP_INDEX):
+        for j in range(LENGTH_OP_INDEX):
+            # not a perfect test: check for each entry of correlation matrix
+            # that MC average equals the naive numpy result
+            assert (corr_np[:, i, j] == corr.item(i, j).plottable()[1]).all()
