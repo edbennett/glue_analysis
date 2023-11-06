@@ -127,7 +127,7 @@ class CorrelatorEnsemble:
         return sorted_vevs.Vac_exp.values.reshape(self.num_bins, self.num_ops)
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
-        if subtract and (self.vevs is None):
+        if subtract and ("vevs" not in dir(self)):
             raise ValueError("Can't subtract vevs that have not been read.")
 
         array = self.get_numpy()

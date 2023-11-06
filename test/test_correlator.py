@@ -165,3 +165,11 @@ def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
     expected = corr_ensemble.vevs["Vac_exp"].values
     corr_ensemble.vevs = corr_ensemble.vevs.sample(frac=1)
     assert (corr_ensemble.get_numpy_vevs().reshape(-1) == expected).all()
+
+
+def test_correlator_ensemble_raises_for_subtract_without_vevs_present(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    del corr_ensemble.vevs
+    with pytest.raises(ValueError):
+        corr_ensemble.get_pyerrors(subtract=True)
