@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import logging
-from typing import Any, Self
 from collections.abc import Callable
+from typing import Any, Self
 
 import numpy as np
 import pandas as pd
@@ -108,7 +108,7 @@ class CorrelatorEnsemble:
         return True
 
     @only_on_consistent_data
-    def get_numpy(self) -> np.array:
+    def get_numpy(self: Self) -> np.array:
         sorted_correlators = self.correlators.sort_values(
             by=["Bin_index", "Time", "Op_index1", "Op_index2"]
         )
@@ -117,7 +117,7 @@ class CorrelatorEnsemble:
         )
 
     @only_on_consistent_data
-    def get_numpy_vevs(self) -> np.array:
+    def get_numpy_vevs(self: Self) -> np.array:
         sorted_vevs = self.vevs.sort_values(by=["Bin_index", "Op_index"])
         return sorted_vevs.Vac_exp.values.reshape(self.num_bins, self.num_ops)
 
