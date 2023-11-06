@@ -107,3 +107,12 @@ def test_correlator_ensemble_returns_correctly_shaped_numpy(
         LENGTH_OP_INDEX,
         LENGTH_OP_INDEX,
     )
+
+
+def test_correlator_ensemble_returns_correct_numpy_data(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    assert (
+        corr_ensemble.get_numpy().reshape(-1)
+        == corr_ensemble.correlators["Correlation"].values
+    ).all()
