@@ -70,6 +70,7 @@ def _read_correlators_binary(
 def _read(file: BinaryIO, header: dict[str, int], vev: bool) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
     correlators = _columns_from_header(header, vev).assign(
+        # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
         glue_bins=np.frombuffer(file.read(), dtype=np.float64)
     )
     file.seek(0)
