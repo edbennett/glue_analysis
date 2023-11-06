@@ -10,6 +10,8 @@ from glue_analysis.readers.read_binary import (
     CORRELATOR_COLUMNS,
     CORRELATOR_INDEXING_COLUMNS,
     HEADER_NAMES,
+    VEV_COLUMNS,
+    VEV_INDEXING_COLUMNS,
     ParsingError,
     _read_correlators_binary,
 )
@@ -25,26 +27,30 @@ def header() -> dict[str, int]:
     return {name: i + 1 for i, name in enumerate(HEADER_NAMES)}
 
 
-def columns_from_header(header: dict[str, int]) -> pd.DataFrame:
+def columns_from_header(header: dict[str, int], vev: bool = False) -> pd.DataFrame:
+    index_ranges = [
+        range(1, header["Nbin"] + 1),  # Bin_index
+        range(1, header["Nbl"] + 1),  # Blocking_index1
+        range(1, header["Nop"] + 1),  # Op_index1
+    ]
+    if not vev:
+        index_ranges += [
+            range(1, header["Nbl"] + 1),  # Blocking_index2
+            range(1, header["Nop"] + 1),  # Op_index2
+            range(1, int(header["LT"] / 2 + 1) + 1),  # Time
+        ]
     return (
         pd.MultiIndex.from_product(
-            [
-                range(1, header["Nbin"] + 1),  # Bin_index
-                range(1, header["Nbl"] + 1),  # Blocking_index1
-                range(1, header["Nop"] + 1),  # Op_index1
-                range(1, header["Nbl"] + 1),  # Blocking_index2
-                range(1, header["Nop"] + 1),  # Op_index2
-                range(1, int(header["LT"] / 2 + 1) + 1),  # Time
-            ],
-            names=CORRELATOR_INDEXING_COLUMNS,
+            index_ranges,
+            names=VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS,
         )
         .to_frame()
         .reset_index(drop=True)
     )
 
 
-def create_data(header: dict[str, int]) -> np.array:
-    return np.random.random(columns_from_header(header).shape[0])
+def create_data(header: dict[str, int], vev: bool = False) -> np.array:
+    return np.random.random(columns_from_header(header, vev=vev).shape[0])
 
 
 @pytest.fixture()
@@ -52,7 +58,12 @@ def data(header: dict[str, int]) -> np.array:
     return create_data(header)
 
 
-def create_corr_file(header: dict[str, int], data: np.array) -> BytesIO:
+@pytest.fixture()
+def vev_data(header: dict[str, int]) -> np.array:
+    return create_data(header, vev=True)
+
+
+def create_file(header: dict[str, int], data: np.array) -> BytesIO:
     memory_file = BytesIO()
     memory_file.write(
         np.array([header[name] for name in HEADER_NAMES], dtype=np.float64).tobytes()
@@ -64,7 +75,12 @@ def create_corr_file(header: dict[str, int], data: np.array) -> BytesIO:
 
 @pytest.fixture()
 def corr_file(header: dict[str, int], data: np.array) -> BytesIO:
-    return create_corr_file(header, data)
+    return create_file(header, data)
+
+
+@pytest.fixture()
+def vev_file(header: dict[str, int], vev_data: np.array) -> BytesIO:
+    return create_file(header, vev_data)
 
 
 @pytest.fixture()
@@ -77,16 +93,6 @@ def trivial_vevs() -> pd.DataFrame:
             "Vac_exp": np.ones(10, dtype=np.float64),
         }
     )
-
-
-def create_vev_file(vevs: pd.DataFrame) -> BytesIO:
-    memory_file = BytesIO()
-    memory_file.write(
-        np.array([1 for name in HEADER_NAMES], dtype=np.float64).tobytes()
-    )
-    memory_file.write(np.asarray(vevs["Vac_exp"].values, dtype=np.float64).tobytes())
-    memory_file.seek(0)
-    return memory_file
 
 
 ### Trivial behavior
@@ -122,7 +128,7 @@ def test_read_correlators_binary_makes_metadata_from_header_constant(
     filename: str,
 ) -> None:
     header = {name: 1 for name in HEADER_NAMES}
-    corr_file = create_corr_file(header, create_data(header))
+    corr_file = create_file(header, create_data(header))
     answer = _read_correlators_binary(corr_file, filename)
     assert answer.metadata == header
 
@@ -131,7 +137,7 @@ def test_read_correlators_binary_makes_metadata_from_header_rising(
     filename: str,
 ) -> None:
     header = {name: i for i, name in enumerate(HEADER_NAMES)}
-    corr_file = create_corr_file(header, create_data(header))
+    corr_file = create_file(header, create_data(header))
     answer = _read_correlators_binary(corr_file, filename)
     assert answer.metadata == header
 
@@ -165,23 +171,12 @@ def test_read_correlators_binary_raises_on_any_doubly_specified_metadata(
 #### VEVs
 
 
-def test_read_correlators_binary_reads_trivial_vev(
-    corr_file: BinaryIO, filename: str, trivial_vevs: pd.DataFrame
+def test_read_correlators_binary_has_correct_columns_in_vev(
+    corr_file: BinaryIO, filename: str, vev_file: BinaryIO
 ) -> None:
-    answer = _read_correlators_binary(
-        corr_file, filename, vev_file=create_vev_file(trivial_vevs)
-    )
-    assert (answer.vevs == trivial_vevs).all().all()
-
-
-def test_read_correlators_binary_reads_linear_vevs(
-    corr_file: BinaryIO, filename: str, trivial_vevs: pd.DataFrame
-) -> None:
-    trivial_vevs["Vac_exp"] = range(trivial_vevs.shape[0])
-    answer = _read_correlators_binary(
-        corr_file, filename, vev_file=create_vev_file(trivial_vevs)
-    )
-    assert (answer.vevs == trivial_vevs).all().all()
+    answer = _read_correlators_binary(corr_file, filename, vev_file=vev_file)
+    print(answer.vevs.columns)
+    assert (answer.vevs.columns == VEV_COLUMNS).all()
 
 
 #### Correlators

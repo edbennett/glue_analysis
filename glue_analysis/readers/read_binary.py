@@ -8,14 +8,22 @@ from ..correlator import CorrelatorEnsemble
 
 LENGTH_OF_CORRELATOR_INDEXING = {
     "Bin_Index": lambda header: header["Nbin"],
-    "Blocking_index2": lambda header: header["Nbl"],
-    "Op_index2": lambda header: header["Nop"],
-    "Blocking_index1": lambda header: header["Nbl"],
-    "Op_index1": lambda header: header["Nop"],
+    "Blocking_index": lambda header: header["Nbl"],
+    "Op_index": lambda header: header["Nop"],
     "Time": lambda header: int(header["LT"] / 2 + 1),
 }
-CORRELATOR_INDEXING_COLUMNS = list(LENGTH_OF_CORRELATOR_INDEXING.keys())
+CORRELATOR_INDEXING_COLUMNS = [
+    "Bin_Index",
+    "Blocking_index2",
+    "Op_index2",
+    "Blocking_index1",
+    "Op_index1",
+    "Time",
+]
+NUMBERS = "0123456789"
 CORRELATOR_COLUMNS = CORRELATOR_INDEXING_COLUMNS + ["glue_bins"]
+VEV_INDEXING_COLUMNS = ["Bin_Index", "Blocking_index", "Op_index"]
+VEV_COLUMNS = VEV_INDEXING_COLUMNS + ["glue_bins"]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
 HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
@@ -54,7 +62,7 @@ def _read_correlators_binary(
     correlators.metadata = _assemble_metadata(corr_file, metadata)
     correlators.correlators = _read(corr_file, correlators.metadata, vev=False)
     if vev_file:
-        correlators.vevs = _read_vevs(vev_file, metadata)
+        correlators.vevs = _read(vev_file, correlators.metadata, vev=True)
     correlators._frozen = True
     return correlators
 
@@ -96,26 +104,14 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
     return header
 
 
-def _read_vevs(vev_file: BinaryIO, metadata: dict[str, Any] | None) -> pd.DataFrame:
-    vev_file.seek(HEADER_LENGTH)
-    vevs = pd.DataFrame(
-        {
-            "Bin_index": np.arange(10, dtype=np.float64),
-            "Operator_index": np.ones(10, dtype=np.float64),
-            "Blocking_index": np.ones(10, dtype=np.float64),
-            "Vac_exp": np.frombuffer(vev_file.read(), dtype=np.float64),
-        }
-    )
-    vev_file.seek(0)
-    return vevs
-
-
 def _columns_from_header(header: dict[str, int], vev: bool) -> pd.DataFrame:
-    columns = CORRELATOR_INDEXING_COLUMNS
+    columns = VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS
     return (
         pd.MultiIndex.from_product(
             [
-                range(1, LENGTH_OF_CORRELATOR_INDEXING[column](header) + 1)
+                range(
+                    1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1
+                )
                 for column in columns
             ],
             names=columns,
