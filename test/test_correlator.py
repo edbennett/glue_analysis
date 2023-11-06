@@ -22,7 +22,8 @@ def corr_data() -> CorrelatorData:
             names=["Bin_index", "Time", "Op_index1", "Op_index2"],
         )
         .to_frame()
-        .assign(glue_bins=range(CORRELATOR_DATA_LENGTH))
+        .reset_index(drop=True)
+        .assign(Correlation=range(CORRELATOR_DATA_LENGTH))
     )
 
 
@@ -35,6 +36,7 @@ def filename() -> str:
 def corr_ensemble(filename: str, corr_data: CorrelatorData) -> CorrelatorEnsemble:
     corr_ensemble = CorrelatorEnsemble(filename)
     corr_ensemble.correlators = corr_data
+    corr_ensemble._frozen = True
     return corr_ensemble
 
 
@@ -89,3 +91,19 @@ def test_correlator_ensemble_reports_correct_properties(
     # Scramble as a second test:
     corr_ensemble.correlators = corr_ensemble.correlators.sample(frac=1)
     assert getattr(corr_ensemble, prop) == value
+
+
+# We don't test the consistency checks at this point. They are extensive and
+# rely on all those implicit conventions about the data structure we're about to
+# change. Come back and test them when they are meaningful again.
+
+
+def test_correlator_ensemble_returns_correctly_shaped_numpy(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    assert corr_ensemble.get_numpy().shape == (
+        LENGTH_BIN_INDEX,
+        LENGTH_TIME,
+        LENGTH_OP_INDEX,
+        LENGTH_OP_INDEX,
+    )
