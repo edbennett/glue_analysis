@@ -8,6 +8,7 @@ LENGTH_TIME = 2
 LENGTH_OP_INDEX = 3
 CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_BIN_INDEX * LENGTH_OP_INDEX**2
 VEV_DATA_LENGTH = LENGTH_BIN_INDEX * LENGTH_OP_INDEX
+MC_TIME_AXIS = 0
 
 
 @pytest.fixture()
@@ -179,9 +180,26 @@ def test_correlator_ensemble_returned_correlator_has_correct_averages(
     corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     corr = corr_ensemble.get_pyerrors()
-    corr_np = corr_ensemble.get_numpy().mean(axis=0)  # average over MC time
+    corr_np = corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
     for i in range(LENGTH_OP_INDEX):
         for j in range(LENGTH_OP_INDEX):
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (corr_np[:, i, j] == corr.item(i, j).plottable()[1]).all()
+
+
+@pytest.mark.xfail(reason="Wrong implementation as discussed in #14", strict=True)
+def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    corr = corr_ensemble.get_pyerrors(subtract=True)
+    corr_np = corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
+    vevs_np = corr_ensemble.get_numpy_vevs().mean(axis=MC_TIME_AXIS)
+    for i in range(LENGTH_OP_INDEX):
+        for j in range(LENGTH_OP_INDEX):
+            # not a perfect test: check for each entry of correlation matrix
+            # that MC average equals the naive numpy result
+            assert (
+                corr_np[:, i, j] - vevs_np[i] * vevs_np[j]
+                == corr.item(i, j).plottable()[1]
+            ).all()
