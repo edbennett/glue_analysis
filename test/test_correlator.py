@@ -7,6 +7,7 @@ LENGTH_BIN_INDEX = 1
 LENGTH_TIME = 2
 LENGTH_OP_INDEX = 3
 CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_BIN_INDEX * LENGTH_OP_INDEX**2
+VEV_DATA_LENGTH = LENGTH_BIN_INDEX * LENGTH_OP_INDEX
 
 
 @pytest.fixture()
@@ -33,16 +34,30 @@ def filename() -> str:
 
 
 @pytest.fixture()
-def corr_ensemble(filename: str, corr_data: CorrelatorData) -> CorrelatorEnsemble:
-    corr_ensemble = CorrelatorEnsemble(filename)
-    corr_ensemble.correlators = corr_data
-    corr_ensemble._frozen = True
-    return corr_ensemble
+def vev_data() -> CorrelatorData:
+    return (
+        pd.MultiIndex.from_product(
+            [
+                range(1, LENGTH_BIN_INDEX + 1),
+                range(1, LENGTH_OP_INDEX + 1),
+            ],
+            names=["Bin_index", "Op_index"],
+        )
+        .to_frame()
+        .reset_index(drop=True)
+        .assign(Vac_exp=range(VEV_DATA_LENGTH))
+    )
 
 
 @pytest.fixture()
-def vev_data() -> CorrelatorData:
-    return pd.DataFrame()
+def corr_ensemble(
+    filename: str, corr_data: CorrelatorData, vev_data: VEVData
+) -> CorrelatorEnsemble:
+    corr_ensemble = CorrelatorEnsemble(filename)
+    corr_ensemble.correlators = corr_data
+    corr_ensemble.vevs = vev_data
+    corr_ensemble._frozen = True
+    return corr_ensemble
 
 
 def test_correlator_ensemble_stores_filename() -> None:
@@ -115,4 +130,22 @@ def test_correlator_ensemble_returns_correct_numpy_data(
     assert (
         corr_ensemble.get_numpy().reshape(-1)
         == corr_ensemble.correlators["Correlation"].values
+    ).all()
+
+
+def test_correlator_ensemble_returns_correctly_shaped_numpy_vevs(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    assert corr_ensemble.get_numpy_vevs().shape == (
+        LENGTH_BIN_INDEX,
+        LENGTH_OP_INDEX,
+    )
+
+
+def test_correlator_ensemble_returns_correct_numpy_data_for_vevs(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    assert (
+        corr_ensemble.get_numpy_vevs().reshape(-1)
+        == corr_ensemble.vevs["Vac_exp"].values
     ).all()
