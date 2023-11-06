@@ -179,6 +179,28 @@ def test_read_correlators_binary_has_correct_columns_in_vev(
     assert (answer.vevs.columns == VEV_COLUMNS).all()
 
 
+def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_vev(
+    corr_file: BinaryIO, filename: str, vev_data: np.array, header: dict[str, int]
+) -> None:
+    answer = _read_correlators_binary(
+        corr_file, filename, vev_file=create_file(header, vev_data)
+    )
+    assert (
+        (answer.vevs[VEV_INDEXING_COLUMNS] == columns_from_header(header, vev=True))
+        .all()
+        .all()
+    )
+
+
+def test_read_correlators_binary_preserves_data_in_vev(
+    corr_file: BinaryIO, filename: str, header: dict[str, int], vev_data: np.array
+) -> None:
+    answer = _read_correlators_binary(
+        corr_file, filename, vev_file=create_file(header, vev_data)
+    )
+    assert (answer.vevs["glue_bins"] == vev_data).all()
+
+
 #### Correlators
 
 
