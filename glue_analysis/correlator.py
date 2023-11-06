@@ -159,3 +159,7 @@ class CorrelatorEnsemble:
         )
 
         return pe.Corr(correlation_covariances)
+
+
+def to_obs_array(array: np.array, ensemble_name: str) -> pe.Obs:
+    return pe.Obs([array], [ensemble_name])

@@ -1,7 +1,14 @@
+import numpy as np
 import pandas as pd
+import pyerrors as pe
 import pytest
 
-from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
+from glue_analysis.correlator import (
+    CorrelatorData,
+    CorrelatorEnsemble,
+    VEVData,
+    to_obs_array,
+)
 
 LENGTH_BIN_INDEX = 5  # needs at least 5 or pe.Corr complains
 LENGTH_TIME = 2
@@ -223,3 +230,21 @@ def test_correlator_ensemble_defaults_to_glue_bins_as_ensemble_name(
     assert corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
         "glue_bins"
     ]
+
+
+### to_obs_array
+
+
+@pytest.mark.parametrize(
+    "data,ensemble_name",
+    [
+        (np.ones(10), "some-name"),
+        (np.ones(10), "other-name"),
+        (np.arange(10), "some-name"),
+    ],
+    ids=["trivial", "configurable-name", "other-data"],
+)
+def test_to_obs_array_works_on_one_dimensional_arrays(
+    data: np.array, ensemble_name: str
+) -> None:
+    assert to_obs_array(data, ensemble_name) == pe.Obs([data], [ensemble_name])
