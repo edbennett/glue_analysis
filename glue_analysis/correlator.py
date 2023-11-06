@@ -162,4 +162,12 @@ class CorrelatorEnsemble:
 
 
 def to_obs_array(array: np.array, ensemble_name: str) -> pe.Obs:
-    return pe.Obs([array], [ensemble_name])
+    if array.ndim == 1:
+        return pe.Obs([array], [ensemble_name])
+
+    return np.asarray(
+        [
+            to_obs_array(sub_array, ensemble_name)
+            for sub_array in np.moveaxis(array, 1, 0)
+        ]
+    )

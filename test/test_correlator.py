@@ -248,3 +248,29 @@ def test_to_obs_array_works_on_one_dimensional_arrays(
     data: np.array, ensemble_name: str
 ) -> None:
     assert to_obs_array(data, ensemble_name) == pe.Obs([data], [ensemble_name])
+
+
+def test_to_obs_array_works_on_two_dimensional_arrays() -> None:
+    data = np.arange(20).reshape(10, 2)
+    ensemble_name = "some-name"
+    assert (
+        to_obs_array(data, ensemble_name)
+        == [
+            pe.Obs([data[:, 0]], [ensemble_name]),
+            pe.Obs([data[:, 1]], [ensemble_name]),
+        ]
+    ).all()
+
+
+def test_to_obs_array_works_on_four_dimensional_arrays() -> None:
+    data = np.arange(20).reshape(10, 2, 1, 1)
+    ensemble_name = "some-name"
+    assert (
+        to_obs_array(data, ensemble_name)
+        == np.asarray(
+            [
+                [[pe.Obs([data[:, 0, 0, 0]], [ensemble_name])]],
+                [[pe.Obs([data[:, 1, 0, 0]], [ensemble_name])]],
+            ]
+        )
+    ).all()
