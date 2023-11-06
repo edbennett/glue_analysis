@@ -24,10 +24,11 @@ class CorrelatorEnsemble:
     Represents a full ensemble of gluonic correlation functions.
     """
 
-    _frozen: bool = False
+    filename: str
     correlators: pd.DataFrame
     vevs: pd.DataFrame
     metadata: dict[str, Any]
+    _frozen: bool = False
 
     def __init__(self: Self, filename: str) -> None:
         self.filename = filename
