@@ -198,7 +198,7 @@ def test_read_correlators_binary_preserves_data_in_vev(
     answer = _read_correlators_binary(
         corr_file, filename, vev_file=create_file(header, vev_data)
     )
-    assert (answer.vevs["glue_bins"] == vev_data).all()
+    assert (answer.vevs["Vac_exp"] == vev_data).all()
 
 
 #### Correlators

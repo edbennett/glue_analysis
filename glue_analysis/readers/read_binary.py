@@ -23,7 +23,7 @@ CORRELATOR_INDEXING_COLUMNS = [
 NUMBERS = "0123456789"
 CORRELATOR_COLUMNS = CORRELATOR_INDEXING_COLUMNS + ["glue_bins"]
 VEV_INDEXING_COLUMNS = ["Bin_index", "Blocking_index", "Op_index"]
-VEV_COLUMNS = VEV_INDEXING_COLUMNS + ["glue_bins"]
+VEV_COLUMNS = VEV_INDEXING_COLUMNS + ["Vac_exp"]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
 HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
@@ -69,9 +69,10 @@ def _read_correlators_binary(
 
 def _read(file: BinaryIO, header: dict[str, int], vev: bool) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
-    correlators = _columns_from_header(header, vev).assign(
+    correlators = _columns_from_header(header, vev)
+    correlators[VEV_COLUMNS[-1] if vev else CORRELATOR_COLUMNS[-1]] = (
         # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
-        glue_bins=np.frombuffer(file.read(), dtype=np.float64)
+        np.frombuffer(file.read(), dtype=np.float64)
     )
     file.seek(0)
     return correlators
