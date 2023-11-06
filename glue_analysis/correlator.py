@@ -1,11 +1,22 @@
 #!/usr/bin/env python3
 
 import logging
+from collections.abc import Callable
 from typing import Any, Self
 
 import numpy as np
 import pandas as pd
 import pyerrors as pe
+
+
+def only_on_consistent_data(func: Callable) -> Callable:
+    # Completely generic function, ignore typing here
+    def func_with_check(self, *args, **kwargs):  # noqa: ANN202,ANN001,ANN002,ANN003
+        if not self.is_consistent:
+            raise ValueError("Data are inconsistent.")
+        return func(self, *args, **kwargs)
+
+    return func_with_check
 
 
 class CorrelatorEnsemble:
@@ -96,9 +107,8 @@ class CorrelatorEnsemble:
 
         return True
 
+    @only_on_consistent_data
     def get_numpy(self: Self) -> np.array:
-        if not self.is_consistent:
-            raise ValueError("Data are inconsistent.")
         sorted_correlators = self.correlators.sort_values(
             by=["Bin_index", "Time", "Op_index1", "Op_index2"]
         )
@@ -106,9 +116,8 @@ class CorrelatorEnsemble:
             self.num_bins, self.NT, self.num_ops, self.num_ops
         )
 
+    @only_on_consistent_data
     def get_numpy_vevs(self: Self) -> np.array:
-        if not self.is_consistent:
-            raise ValueError("Data are inconsistent")
         sorted_vevs = self.vevs.sort_values(by=["Bin_index", "Op_index"])
         return sorted_vevs.Vac_exp.values.reshape(self.num_bins, self.num_ops)
 
