@@ -79,3 +79,10 @@ def test_correlator_ensemble_reports_correct_NT(
     corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert corr_ensemble.NT == LENGTH_TIME
+
+
+def test_correlator_ensemble_reports_correct_NT_on_scrambled(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    corr_ensemble.correlators = corr_ensemble.correlators.sample(frac=1)
+    assert corr_ensemble.NT == LENGTH_TIME
