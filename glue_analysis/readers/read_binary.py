@@ -111,15 +111,15 @@ def _read_vevs(vev_file: BinaryIO, metadata: dict[str, Any] | None) -> pd.DataFr
 
 
 def _columns_from_header(header: dict[str, int], vev: bool) -> pd.DataFrame:
-    if not vev:
-        return (
-            pd.MultiIndex.from_product(
-                [
-                    range(1, length(header) + 1)
-                    for length in LENGTH_OF_CORRELATOR_INDEXING.values()
-                ],
-                names=CORRELATOR_INDEXING_COLUMNS,
-            )
-            .to_frame()
-            .reset_index(drop=True)
+    columns = CORRELATOR_INDEXING_COLUMNS
+    return (
+        pd.MultiIndex.from_product(
+            [
+                range(1, LENGTH_OF_CORRELATOR_INDEXING[column](header) + 1)
+                for column in columns
+            ],
+            names=columns,
         )
+        .to_frame()
+        .reset_index(drop=True)
+    )
