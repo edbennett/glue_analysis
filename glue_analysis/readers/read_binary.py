@@ -52,19 +52,19 @@ def _read_correlators_binary(
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
-    correlators.correlators = _read_correlators(corr_file, correlators.metadata)
+    correlators.correlators = _read(corr_file, correlators.metadata, vev=False)
     if vev_file:
         correlators.vevs = _read_vevs(vev_file, metadata)
     correlators._frozen = True
     return correlators
 
 
-def _read_correlators(corr_file: BinaryIO, header: dict[str, int]) -> pd.DataFrame:
-    corr_file.seek(HEADER_LENGTH)
-    correlators = _columns_from_header(header).assign(
-        glue_bins=np.frombuffer(corr_file.read(), dtype=np.float64)
+def _read(file: BinaryIO, header: dict[str, int], vev: bool) -> pd.DataFrame:
+    file.seek(HEADER_LENGTH)
+    correlators = _columns_from_header(header, vev).assign(
+        glue_bins=np.frombuffer(file.read(), dtype=np.float64)
     )
-    corr_file.seek(0)
+    file.seek(0)
     return correlators
 
 
@@ -110,15 +110,16 @@ def _read_vevs(vev_file: BinaryIO, metadata: dict[str, Any] | None) -> pd.DataFr
     return vevs
 
 
-def _columns_from_header(header: dict[str, int]) -> pd.DataFrame:
-    return (
-        pd.MultiIndex.from_product(
-            [
-                range(1, length(header) + 1)
-                for length in LENGTH_OF_CORRELATOR_INDEXING.values()
-            ],
-            names=CORRELATOR_INDEXING_COLUMNS,
+def _columns_from_header(header: dict[str, int], vev: bool) -> pd.DataFrame:
+    if not vev:
+        return (
+            pd.MultiIndex.from_product(
+                [
+                    range(1, length(header) + 1)
+                    for length in LENGTH_OF_CORRELATOR_INDEXING.values()
+                ],
+                names=CORRELATOR_INDEXING_COLUMNS,
+            )
+            .to_frame()
+            .reset_index(drop=True)
         )
-        .to_frame()
-        .reset_index(drop=True)
-    )
