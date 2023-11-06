@@ -47,10 +47,12 @@ def test_correlator_ensemble_stores_filename() -> None:
     assert CorrelatorEnsemble("filename").filename == "filename"
 
 
-# for documenting purposes, should be later amended to "does not allow"
+@pytest.mark.xfail(reason="To be implemented later")
 def test_correlator_ensemble_allows_to_set_correlators_as_garbage() -> None:
-    CorrelatorEnsemble("filename").correlators = "garbage that will be forbidden later"
-    # reaching this point means it didn't raise
+    with pytest.raises(ValueError):
+        CorrelatorEnsemble(
+            "filename"
+        ).correlators = "garbage that will be forbidden later"
 
 
 def test_correlator_ensemble_allows_to_set_correlators_with_correct_data(
@@ -60,10 +62,10 @@ def test_correlator_ensemble_allows_to_set_correlators_with_correct_data(
     # reaching this point means it didn't raise
 
 
-# for documenting purposes, should be later amended to "does not allow"
+@pytest.mark.xfail(reason="To be implemented later")
 def test_correlator_ensemble_allows_to_set_vevs_as_garbage() -> None:
-    CorrelatorEnsemble("filename").vevs = "garbage that will be forbidden later"
-    # reaching this point means it didn't raise
+    with pytest.raises(ValueError):
+        CorrelatorEnsemble("filename").vevs = "garbage that will be forbidden later"
 
 
 def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
