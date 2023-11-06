@@ -133,6 +133,14 @@ def test_correlator_ensemble_returns_correct_numpy_data(
     ).all()
 
 
+def test_correlator_ensemble_returns_sorted_numpy_data(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    expected = corr_ensemble.correlators["Correlation"].values
+    corr_ensemble.correlators = corr_ensemble.correlators.sample(frac=1)
+    assert (corr_ensemble.get_numpy().reshape(-1) == expected).all()
+
+
 def test_correlator_ensemble_returns_correctly_shaped_numpy_vevs(
     corr_ensemble: CorrelatorEnsemble,
 ) -> None:
@@ -149,3 +157,11 @@ def test_correlator_ensemble_returns_correct_numpy_data_for_vevs(
         corr_ensemble.get_numpy_vevs().reshape(-1)
         == corr_ensemble.vevs["Vac_exp"].values
     ).all()
+
+
+def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    expected = corr_ensemble.vevs["Vac_exp"].values
+    corr_ensemble.vevs = corr_ensemble.vevs.sample(frac=1)
+    assert (corr_ensemble.get_numpy_vevs().reshape(-1) == expected).all()
