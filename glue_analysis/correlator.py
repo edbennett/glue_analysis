@@ -8,6 +8,10 @@ import numpy as np
 import pandas as pd
 import pyerrors as pe
 
+# for type hints, not really enforced as of now:
+CorrelatorData = pd.DataFrame
+VEVData = pd.DataFrame
+
 
 def only_on_consistent_data(func: Callable) -> Callable:
     # Completely generic function, ignore typing here
