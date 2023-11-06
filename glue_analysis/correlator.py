@@ -107,7 +107,7 @@ class CorrelatorEnsemble:
             logging.warning("Total length not consistent")
             return False
 
-        if self.vevs is not None and not self.has_consistent_vevs:
+        if "vevs" in dir(self) and not self.has_consistent_vevs:
             return False
 
         return True
