@@ -132,33 +132,17 @@ class CorrelatorEnsemble:
         if subtract and not hasattr(self, "vevs"):
             raise ValueError("Can't subtract vevs that have not been read.")
 
-        array = self.get_numpy()
-        if subtract:
-            vevs = self.get_numpy_vevs()
-            vev_matrix = vevs[:, :, np.newaxis] * vevs[:, np.newaxis, :] / self.NT**2
-        else:
-            vev_matrix = np.zeros((self.num_bins, self.num_ops, self.num_ops))
-            # array -= vev_matrix * vev_matrix.swapaxes(2, 3) / self.NT ** 2
-
-        correlation_covariances = np.asarray(
-            [
-                [
-                    [
-                        pe.Obs(
-                            [array[:, t_idx, op_idx1, op_idx2]], [self.ensemble_name]
-                        )
-                        - pe.Obs(
-                            [vev_matrix[:, op_idx1, op_idx2]], [self.ensemble_name]
-                        )
-                        for op_idx2 in range(self.num_ops)
-                    ]
-                    for op_idx1 in range(self.num_ops)
-                ]
-                for t_idx in range(self.NT)
-            ]
+        return pe.Corr(
+            to_obs_array(self.get_numpy(), self.ensemble_name)
+            - (
+                np.outer(
+                    *(2 * [to_obs_array(self.get_numpy_vevs(), self.ensemble_name)])
+                )
+                / self.NT**2
+                if subtract
+                else 0.0
+            )
         )
-
-        return pe.Corr(correlation_covariances)
 
 
 def to_obs_array(array: np.array, ensemble_name: str) -> pe.Obs:

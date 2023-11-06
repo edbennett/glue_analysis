@@ -197,7 +197,6 @@ def test_correlator_ensemble_returned_correlator_has_correct_averages(
             assert (corr_np[:, i, j] == corr.item(i, j).plottable()[1]).all()
 
 
-@pytest.mark.xfail(reason="Wrong implementation as discussed in #14", strict=True)
 def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages(
     corr_ensemble: CorrelatorEnsemble,
 ) -> None:
@@ -209,7 +208,7 @@ def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (
-                corr_np[:, i, j] - vevs_np[i] * vevs_np[j]
+                corr_np[:, i, j] - vevs_np[i] * vevs_np[j] / corr_ensemble.NT**2
                 == corr.item(i, j).plottable()[1]
             ).all()
 
