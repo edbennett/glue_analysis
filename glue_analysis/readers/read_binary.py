@@ -84,7 +84,7 @@ def _assemble_metadata(
     final_metadata = _read_header(corr_file)
     if metadata:
         if conflicting_keys := [
-            print(key, value) or key
+            key
             for key, value in metadata.items()
             if final_metadata.get(key, value) != value
             # if key not in final_metadata, it returns `value` which equals
