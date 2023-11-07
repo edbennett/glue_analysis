@@ -158,14 +158,12 @@ def test_read_correlators_binary_raises_on_conflicting_metadata(
         _read_correlators_binary(corr_file, filename, metadata=metadata)
 
 
-def test_read_correlators_binary_raises_on_any_doubly_specified_metadata(
+def test_read_correlators_binary_accepts_consistently_doubly_specified_metadata(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
-    metadata = {
-        HEADER_NAMES[0]: header[HEADER_NAMES[0]]  # same as header but still forbidden
-    }
-    with pytest.raises(ParsingError):
-        _read_correlators_binary(corr_file, filename, metadata=metadata)
+    metadata = {HEADER_NAMES[0]: header[HEADER_NAMES[0]]}
+    answer = _read_correlators_binary(corr_file, filename, metadata=metadata)
+    assert answer.metadata == header
 
 
 #### VEVs

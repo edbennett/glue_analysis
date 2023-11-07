@@ -83,7 +83,15 @@ def _assemble_metadata(
 ) -> dict[str, Any]:
     final_metadata = _read_header(corr_file)
     if metadata:
-        if conflicting_keys := [key for key in metadata if key in HEADER_NAMES]:
+        if conflicting_keys := [
+            print(key, value) or key
+            for key, value in metadata.items()
+            if final_metadata.get(key, value) != value
+            # if key not in final_metadata, it returns `value` which equals
+            # `value`
+            # if key in final_metadata, it return the entry from there which is
+            # fine if and only if that ones equal to `value` again
+        ]:
             raise ParsingError(
                 f"Metadata contains the keys {conflicting_keys} "
                 "which are supposed to be read from the header."
