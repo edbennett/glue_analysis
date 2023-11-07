@@ -32,10 +32,12 @@ class CorrelatorEnsemble:
     correlators: pd.DataFrame
     vevs: pd.DataFrame
     metadata: dict[str, Any]
+    ensemble_name: str
     _frozen: bool = False
 
-    def __init__(self: Self, filename: str) -> None:
+    def __init__(self: Self, filename: str, ensemble_name: str | None = None) -> None:
         self.filename = filename
+        self.ensemble_name = ensemble_name if ensemble_name else "glue_bins"
 
     @property
     def NT(self: Self) -> int:
@@ -142,8 +144,12 @@ class CorrelatorEnsemble:
             [
                 [
                     [
-                        pe.Obs([array[:, t_idx, op_idx1, op_idx2]], ["glue_bins"])
-                        - pe.Obs([vev_matrix[:, op_idx1, op_idx2]], ["glue_bins"])
+                        pe.Obs(
+                            [array[:, t_idx, op_idx1, op_idx2]], [self.ensemble_name]
+                        )
+                        - pe.Obs(
+                            [vev_matrix[:, op_idx1, op_idx2]], [self.ensemble_name]
+                        )
                         for op_idx2 in range(self.num_ops)
                     ]
                     for op_idx1 in range(self.num_ops)

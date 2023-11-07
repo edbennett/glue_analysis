@@ -203,3 +203,23 @@ def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages
                 corr_np[:, i, j] - vevs_np[i] * vevs_np[j]
                 == corr.item(i, j).plottable()[1]
             ).all()
+
+
+def test_correlator_ensemble_has_configurable_ensemble_name(
+    corr_data: CorrelatorData,
+) -> None:
+    ensemble_name = "some-other-name"
+    corr_ensemble = CorrelatorEnsemble(filename, ensemble_name=ensemble_name)
+    corr_ensemble.correlators = corr_data
+    corr_ensemble._frozen = True
+    assert corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
+        ensemble_name
+    ]
+
+
+def test_correlator_ensemble_defaults_to_glue_bins_as_ensemble_name(
+    corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    assert corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
+        "glue_bins"
+    ]
