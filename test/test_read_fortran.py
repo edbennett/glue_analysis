@@ -62,7 +62,7 @@ def test_read_correlators_fortran_does_not_create_vev_if_not_given(
     trivial_file: TextIO, filename: str
 ) -> None:
     answer = _read_correlators_fortran(trivial_file, filename)
-    assert "vevs" not in dir(answer)
+    assert not hasattr(answer, "vevs")
 
 
 def test_read_correlators_fortran_sets_not_given_metadata_to_empty_dict(

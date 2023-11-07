@@ -8,6 +8,10 @@ import numpy as np
 import pandas as pd
 import pyerrors as pe
 
+# for type hints, not really enforced as of now:
+CorrelatorData = pd.DataFrame
+VEVData = pd.DataFrame
+
 
 def only_on_consistent_data(func: Callable) -> Callable:
     # Completely generic function, ignore typing here
@@ -24,10 +28,11 @@ class CorrelatorEnsemble:
     Represents a full ensemble of gluonic correlation functions.
     """
 
-    _frozen: bool = False
+    filename: str
     correlators: pd.DataFrame
     vevs: pd.DataFrame
     metadata: dict[str, Any]
+    _frozen: bool = False
 
     def __init__(self: Self, filename: str) -> None:
         self.filename = filename
@@ -102,7 +107,7 @@ class CorrelatorEnsemble:
             logging.warning("Total length not consistent")
             return False
 
-        if self.vevs is not None and not self.has_consistent_vevs:
+        if hasattr(self, "vevs") and not self.has_consistent_vevs:
             return False
 
         return True
@@ -122,7 +127,7 @@ class CorrelatorEnsemble:
         return sorted_vevs.Vac_exp.values.reshape(self.num_bins, self.num_ops)
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
-        if subtract and (self.vevs is None):
+        if subtract and not hasattr(self, "vevs"):
             raise ValueError("Can't subtract vevs that have not been read.")
 
         array = self.get_numpy()
