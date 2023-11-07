@@ -12,11 +12,11 @@ from glue_analysis.correlator import (
     to_obs_array,
 )
 
-LENGTH_BIN_INDEX = 5  # needs at least 5 or pe.Corr complains
+LENGTH_MC_TIME = 5  # needs at least 5 or pe.Corr complains
 LENGTH_TIME = 2
 LENGTH_OP_INDEX = 3
-CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_BIN_INDEX * LENGTH_OP_INDEX**2
-VEV_DATA_LENGTH = LENGTH_BIN_INDEX * LENGTH_OP_INDEX
+CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_MC_TIME * LENGTH_OP_INDEX**2
+VEV_DATA_LENGTH = LENGTH_MC_TIME * LENGTH_OP_INDEX
 MC_TIME_AXIS = 0
 
 
@@ -25,7 +25,7 @@ def corr_data() -> CorrelatorData:
     return (
         pd.MultiIndex.from_product(
             [
-                range(1, LENGTH_BIN_INDEX + 1),
+                range(1, LENGTH_MC_TIME + 1),
                 range(1, LENGTH_TIME + 1),
                 range(1, LENGTH_OP_INDEX + 1),
                 range(1, LENGTH_OP_INDEX + 1),
@@ -48,7 +48,7 @@ def vev_data() -> CorrelatorData:
     return (
         pd.MultiIndex.from_product(
             [
-                range(1, LENGTH_BIN_INDEX + 1),
+                range(1, LENGTH_MC_TIME + 1),
                 range(1, LENGTH_OP_INDEX + 1),
             ],
             names=["MC_Time", "Op_index"],
@@ -104,8 +104,12 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
 
 @pytest.mark.parametrize(
     "prop,value",
-    [("NT", LENGTH_TIME), ("num_ops", LENGTH_OP_INDEX), ("num_bins", LENGTH_BIN_INDEX)],
-    ids=["NT", "num_ops", "num_bins"],
+    [
+        ("NT", LENGTH_TIME),
+        ("num_ops", LENGTH_OP_INDEX),
+        ("num_samples", LENGTH_MC_TIME),
+    ],
+    ids=["NT", "num_ops", "num_samples"],
 )
 def test_correlator_ensemble_reports_correct_properties(
     corr_ensemble: CorrelatorEnsemble, prop: str, value: int
@@ -127,7 +131,7 @@ def test_correlator_ensemble_returns_correctly_shaped_numpy(
     corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert corr_ensemble.get_numpy().shape == (
-        LENGTH_BIN_INDEX,
+        LENGTH_MC_TIME,
         LENGTH_TIME,
         LENGTH_OP_INDEX,
         LENGTH_OP_INDEX,
@@ -155,7 +159,7 @@ def test_correlator_ensemble_returns_correctly_shaped_numpy_vevs(
     corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert corr_ensemble.get_numpy_vevs().shape == (
-        LENGTH_BIN_INDEX,
+        LENGTH_MC_TIME,
         LENGTH_OP_INDEX,
     )
 

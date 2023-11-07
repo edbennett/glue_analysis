@@ -48,7 +48,7 @@ class CorrelatorEnsemble:
         return max(self.correlators.Op_index1)
 
     @property
-    def num_bins(self: Self) -> int:
+    def num_samples(self: Self) -> int:
         return max(self.correlators.MC_Time)
 
     @property
@@ -59,20 +59,20 @@ class CorrelatorEnsemble:
         if len(set(self.vevs.Op_index)) != self.num_ops:
             logging.warning("Missing operators in vevs")
 
-        if max(self.vevs.MC_Time) != self.num_bins:
-            logging.warning("Wrong number of bins in vevs")
+        if max(self.vevs.MC_Time) != self.num_samples:
+            logging.warning("Wrong number of samples in vevs")
             return False
-        if len(set(self.vevs.MC_Time)) != self.num_bins:
-            logging.warning("Missing bins in vevs")
+        if len(set(self.vevs.MC_Time)) != self.num_samples:
+            logging.warning("Missing samples in vevs")
             return False
 
         for op_idx in range(1, self.num_ops + 1):
-            for bin_idx in range(1, self.num_bins + 1):
+            for sample in range(1, self.num_samples + 1):
                 if (
-                    sum((self.vevs.Op_index == op_idx) & (self.vevs.MC_Time == bin_idx))
+                    sum((self.vevs.Op_index == op_idx) & (self.vevs.MC_Time == sample))
                     != 1
                 ):
-                    logging.warning(f"Missing {op_idx=}, {bin_idx=} in vevs")
+                    logging.warning(f"Missing {op_idx=}, {sample=} in vevs")
                     return False
 
         return True
@@ -98,11 +98,11 @@ class CorrelatorEnsemble:
             logging.warning("Missing time slices")
             return False
 
-        if len(set(self.correlators.MC_Time)) != self.num_bins:
-            logging.warning("Missing bins")
+        if len(set(self.correlators.MC_Time)) != self.num_samples:
+            logging.warning("Missing samples")
             return False
 
-        if len(self.correlators) != self.num_bins * self.NT * self.num_ops**2:
+        if len(self.correlators) != self.num_samples * self.NT * self.num_ops**2:
             logging.warning("Total length not consistent")
             return False
 
@@ -117,13 +117,13 @@ class CorrelatorEnsemble:
             by=["MC_Time", "Time", "Op_index1", "Op_index2"]
         )
         return sorted_correlators.Correlation.values.reshape(
-            self.num_bins, self.NT, self.num_ops, self.num_ops
+            self.num_samples, self.NT, self.num_ops, self.num_ops
         )
 
     @only_on_consistent_data
     def get_numpy_vevs(self: Self) -> np.array:
         sorted_vevs = self.vevs.sort_values(by=["MC_Time", "Op_index"])
-        return sorted_vevs.Vac_exp.values.reshape(self.num_bins, self.num_ops)
+        return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_ops)
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
         if subtract and not hasattr(self, "vevs"):
