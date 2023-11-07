@@ -1,7 +1,16 @@
+#!/usr/bin/env python3
+
+import numpy as np
 import pandas as pd
+import pyerrors as pe
 import pytest
 
-from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
+from glue_analysis.correlator import (
+    CorrelatorData,
+    CorrelatorEnsemble,
+    VEVData,
+    to_obs_array,
+)
 
 LENGTH_BIN_INDEX = 5  # needs at least 5 or pe.Corr complains
 LENGTH_TIME = 2
@@ -188,7 +197,6 @@ def test_correlator_ensemble_returned_correlator_has_correct_averages(
             assert (corr_np[:, i, j] == corr.item(i, j).plottable()[1]).all()
 
 
-@pytest.mark.xfail(reason="Wrong implementation as discussed in #14", strict=True)
 def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages(
     corr_ensemble: CorrelatorEnsemble,
 ) -> None:
@@ -200,7 +208,7 @@ def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (
-                corr_np[:, i, j] - vevs_np[i] * vevs_np[j]
+                corr_np[:, i, j] - vevs_np[i] * vevs_np[j] / corr_ensemble.NT**2
                 == corr.item(i, j).plottable()[1]
             ).all()
 
@@ -223,3 +231,47 @@ def test_correlator_ensemble_defaults_to_glue_bins_as_ensemble_name(
     assert corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
         "glue_bins"
     ]
+
+
+### to_obs_array
+
+
+@pytest.mark.parametrize(
+    "data,ensemble_name",
+    [
+        (np.ones(10), "some-name"),
+        (np.ones(10), "other-name"),
+        (np.arange(10), "some-name"),
+    ],
+    ids=["trivial", "configurable-name", "other-data"],
+)
+def test_to_obs_array_works_on_one_dimensional_arrays(
+    data: np.array, ensemble_name: str
+) -> None:
+    assert to_obs_array(data, ensemble_name) == pe.Obs([data], [ensemble_name])
+
+
+def test_to_obs_array_works_on_two_dimensional_arrays() -> None:
+    data = np.arange(20).reshape(10, 2)
+    ensemble_name = "some-name"
+    assert (
+        to_obs_array(data, ensemble_name)
+        == [
+            pe.Obs([data[:, 0]], [ensemble_name]),
+            pe.Obs([data[:, 1]], [ensemble_name]),
+        ]
+    ).all()
+
+
+def test_to_obs_array_works_on_four_dimensional_arrays() -> None:
+    data = np.arange(20).reshape(10, 2, 1, 1)
+    ensemble_name = "some-name"
+    assert (
+        to_obs_array(data, ensemble_name)
+        == np.asarray(
+            [
+                [[pe.Obs([data[:, 0, 0, 0]], [ensemble_name])]],
+                [[pe.Obs([data[:, 1, 0, 0]], [ensemble_name])]],
+            ]
+        )
+    ).all()
