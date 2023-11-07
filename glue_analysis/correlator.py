@@ -45,7 +45,7 @@ class CorrelatorEnsemble:
 
     @property
     def num_ops(self: Self) -> int:
-        return max(self.correlators.Op_index1)
+        return max(self.correlators.Internal1)
 
     @property
     def num_samples(self: Self) -> int:
@@ -53,10 +53,10 @@ class CorrelatorEnsemble:
 
     @property
     def has_consistent_vevs(self: Self) -> bool:
-        if max(self.vevs.Op_index) != self.num_ops:
+        if max(self.vevs.Internal) != self.num_ops:
             logging.warning("Wrong number of operators in vevs")
             return False
-        if len(set(self.vevs.Op_index)) != self.num_ops:
+        if len(set(self.vevs.Internal)) != self.num_ops:
             logging.warning("Missing operators in vevs")
 
         if max(self.vevs.MC_Time) != self.num_samples:
@@ -69,7 +69,7 @@ class CorrelatorEnsemble:
         for op_idx in range(1, self.num_ops + 1):
             for sample in range(1, self.num_samples + 1):
                 if (
-                    sum((self.vevs.Op_index == op_idx) & (self.vevs.MC_Time == sample))
+                    sum((self.vevs.Internal == op_idx) & (self.vevs.MC_Time == sample))
                     != 1
                 ):
                     logging.warning(f"Missing {op_idx=}, {sample=} in vevs")
@@ -81,17 +81,17 @@ class CorrelatorEnsemble:
     def is_consistent(self: Self) -> bool:
         if not self._frozen:
             raise ValueError("Data must be frozen to check consistency.")
-        if max(self.correlators.Op_index2) != self.num_ops:
+        if max(self.correlators.Internal2) != self.num_ops:
             logging.warning("Inconsistent numbers of operators")
             return False
-        if set(self.correlators.Op_index2) != set(self.correlators.Op_index1):
+        if set(self.correlators.Internal2) != set(self.correlators.Internal1):
             logging.warning("Inconsistent operator pairings")
             return False
-        if len(set(self.correlators.Op_index1)) != self.num_ops:
-            logging.warning("Op_index1 missing one or more operators")
+        if len(set(self.correlators.Internal1)) != self.num_ops:
+            logging.warning("Internal1 missing one or more operators")
             return False
-        if len(set(self.correlators.Op_index2)) != self.num_ops:
-            logging.warning("Op_index2 missing one or more operators")
+        if len(set(self.correlators.Internal2)) != self.num_ops:
+            logging.warning("Internal2 missing one or more operators")
             return False
 
         if len(set(self.correlators.Time)) != self.NT:
@@ -114,7 +114,7 @@ class CorrelatorEnsemble:
     @only_on_consistent_data
     def get_numpy(self: Self) -> np.array:
         sorted_correlators = self.correlators.sort_values(
-            by=["MC_Time", "Time", "Op_index1", "Op_index2"]
+            by=["MC_Time", "Time", "Internal1", "Internal2"]
         )
         return sorted_correlators.Correlation.values.reshape(
             self.num_samples, self.NT, self.num_ops, self.num_ops
@@ -122,7 +122,7 @@ class CorrelatorEnsemble:
 
     @only_on_consistent_data
     def get_numpy_vevs(self: Self) -> np.array:
-        sorted_vevs = self.vevs.sort_values(by=["MC_Time", "Op_index"])
+        sorted_vevs = self.vevs.sort_values(by=["MC_Time", "Internal"])
         return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_ops)
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
