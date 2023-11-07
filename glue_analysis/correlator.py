@@ -44,7 +44,7 @@ class CorrelatorEnsemble:
         return max(self.correlators.Time)
 
     @property
-    def num_ops(self: Self) -> int:
+    def num_internal(self: Self) -> int:
         return max(self.correlators.Internal1)
 
     @property
@@ -53,11 +53,11 @@ class CorrelatorEnsemble:
 
     @property
     def has_consistent_vevs(self: Self) -> bool:
-        if max(self.vevs.Internal) != self.num_ops:
-            logging.warning("Wrong number of operators in vevs")
+        if max(self.vevs.Internal) != self.num_internal:
+            logging.warning("Wrong number of internal dof in vevs")
             return False
-        if len(set(self.vevs.Internal)) != self.num_ops:
-            logging.warning("Missing operators in vevs")
+        if len(set(self.vevs.Internal)) != self.num_internal:
+            logging.warning("Missing internal dof in vevs")
 
         if max(self.vevs.MC_Time) != self.num_samples:
             logging.warning("Wrong number of samples in vevs")
@@ -66,13 +66,15 @@ class CorrelatorEnsemble:
             logging.warning("Missing samples in vevs")
             return False
 
-        for op_idx in range(1, self.num_ops + 1):
+        for internal in range(1, self.num_internal + 1):
             for sample in range(1, self.num_samples + 1):
                 if (
-                    sum((self.vevs.Internal == op_idx) & (self.vevs.MC_Time == sample))
+                    sum(
+                        (self.vevs.Internal == internal) & (self.vevs.MC_Time == sample)
+                    )
                     != 1
                 ):
-                    logging.warning(f"Missing {op_idx=}, {sample=} in vevs")
+                    logging.warning(f"Missing {internal=}, {sample=} in vevs")
                     return False
 
         return True
@@ -81,17 +83,17 @@ class CorrelatorEnsemble:
     def is_consistent(self: Self) -> bool:
         if not self._frozen:
             raise ValueError("Data must be frozen to check consistency.")
-        if max(self.correlators.Internal2) != self.num_ops:
-            logging.warning("Inconsistent numbers of operators")
+        if max(self.correlators.Internal2) != self.num_internal:
+            logging.warning("Inconsistent numbers of internal")
             return False
         if set(self.correlators.Internal2) != set(self.correlators.Internal1):
-            logging.warning("Inconsistent operator pairings")
+            logging.warning("Inconsistent internal dof pairings")
             return False
-        if len(set(self.correlators.Internal1)) != self.num_ops:
-            logging.warning("Internal1 missing one or more operators")
+        if len(set(self.correlators.Internal1)) != self.num_internal:
+            logging.warning("Internal1 missing one or more internal")
             return False
-        if len(set(self.correlators.Internal2)) != self.num_ops:
-            logging.warning("Internal2 missing one or more operators")
+        if len(set(self.correlators.Internal2)) != self.num_internal:
+            logging.warning("Internal2 missing one or more internal")
             return False
 
         if len(set(self.correlators.Time)) != self.NT:
@@ -102,7 +104,7 @@ class CorrelatorEnsemble:
             logging.warning("Missing samples")
             return False
 
-        if len(self.correlators) != self.num_samples * self.NT * self.num_ops**2:
+        if len(self.correlators) != self.num_samples * self.NT * self.num_internal**2:
             logging.warning("Total length not consistent")
             return False
 
@@ -117,13 +119,13 @@ class CorrelatorEnsemble:
             by=["MC_Time", "Time", "Internal1", "Internal2"]
         )
         return sorted_correlators.Correlation.values.reshape(
-            self.num_samples, self.NT, self.num_ops, self.num_ops
+            self.num_samples, self.NT, self.num_internal, self.num_internal
         )
 
     @only_on_consistent_data
     def get_numpy_vevs(self: Self) -> np.array:
         sorted_vevs = self.vevs.sort_values(by=["MC_Time", "Internal"])
-        return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_ops)
+        return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_internal)
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
         if subtract and not hasattr(self, "vevs"):

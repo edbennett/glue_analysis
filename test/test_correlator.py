@@ -14,9 +14,9 @@ from glue_analysis.correlator import (
 
 LENGTH_MC_TIME = 5  # needs at least 5 or pe.Corr complains
 LENGTH_TIME = 2
-LENGTH_OP_INDEX = 3
-CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_MC_TIME * LENGTH_OP_INDEX**2
-VEV_DATA_LENGTH = LENGTH_MC_TIME * LENGTH_OP_INDEX
+LENGTH_INTERNAL = 3
+CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_MC_TIME * LENGTH_INTERNAL**2
+VEV_DATA_LENGTH = LENGTH_MC_TIME * LENGTH_INTERNAL
 MC_TIME_AXIS = 0
 
 
@@ -27,8 +27,8 @@ def corr_data() -> CorrelatorData:
             [
                 range(1, LENGTH_MC_TIME + 1),
                 range(1, LENGTH_TIME + 1),
-                range(1, LENGTH_OP_INDEX + 1),
-                range(1, LENGTH_OP_INDEX + 1),
+                range(1, LENGTH_INTERNAL + 1),
+                range(1, LENGTH_INTERNAL + 1),
             ],
             names=["MC_Time", "Time", "Internal1", "Internal2"],
         )
@@ -49,7 +49,7 @@ def vev_data() -> CorrelatorData:
         pd.MultiIndex.from_product(
             [
                 range(1, LENGTH_MC_TIME + 1),
-                range(1, LENGTH_OP_INDEX + 1),
+                range(1, LENGTH_INTERNAL + 1),
             ],
             names=["MC_Time", "Internal"],
         )
@@ -106,10 +106,10 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
     "prop,value",
     [
         ("NT", LENGTH_TIME),
-        ("num_ops", LENGTH_OP_INDEX),
+        ("num_internal", LENGTH_INTERNAL),
         ("num_samples", LENGTH_MC_TIME),
     ],
-    ids=["NT", "num_ops", "num_samples"],
+    ids=["NT", "num_internal", "num_samples"],
 )
 def test_correlator_ensemble_reports_correct_properties(
     corr_ensemble: CorrelatorEnsemble, prop: str, value: int
@@ -133,8 +133,8 @@ def test_correlator_ensemble_returns_correctly_shaped_numpy(
     assert corr_ensemble.get_numpy().shape == (
         LENGTH_MC_TIME,
         LENGTH_TIME,
-        LENGTH_OP_INDEX,
-        LENGTH_OP_INDEX,
+        LENGTH_INTERNAL,
+        LENGTH_INTERNAL,
     )
 
 
@@ -160,7 +160,7 @@ def test_correlator_ensemble_returns_correctly_shaped_numpy_vevs(
 ) -> None:
     assert corr_ensemble.get_numpy_vevs().shape == (
         LENGTH_MC_TIME,
-        LENGTH_OP_INDEX,
+        LENGTH_INTERNAL,
     )
 
 
@@ -194,8 +194,8 @@ def test_correlator_ensemble_returned_correlator_has_correct_averages(
 ) -> None:
     corr = corr_ensemble.get_pyerrors()
     corr_np = corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
-    for i in range(LENGTH_OP_INDEX):
-        for j in range(LENGTH_OP_INDEX):
+    for i in range(LENGTH_INTERNAL):
+        for j in range(LENGTH_INTERNAL):
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (corr_np[:, i, j] == corr.item(i, j).plottable()[1]).all()
@@ -207,8 +207,8 @@ def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages
     corr = corr_ensemble.get_pyerrors(subtract=True)
     corr_np = corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
     vevs_np = corr_ensemble.get_numpy_vevs().mean(axis=MC_TIME_AXIS)
-    for i in range(LENGTH_OP_INDEX):
-        for j in range(LENGTH_OP_INDEX):
+    for i in range(LENGTH_INTERNAL):
+        for j in range(LENGTH_INTERNAL):
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (

@@ -9,20 +9,20 @@ from ..correlator import CorrelatorEnsemble
 LENGTH_OF_CORRELATOR_INDEXING = {
     "MC_Time": lambda header: header["Nbin"],
     "Blocking_index": lambda header: header["Nbl"],
-    "Op_index": lambda header: header["Nop"],
+    "Internal": lambda header: header["Nop"],
     "Time": lambda header: int(header["LT"] / 2 + 1),
 }
 CORRELATOR_INDEXING_COLUMNS = [
     "MC_Time",
     "Blocking_index2",
-    "Op_index2",
+    "Internal2",
     "Blocking_index1",
-    "Op_index1",
+    "Internal1",
     "Time",
 ]
 NUMBERS = "0123456789"
 CORRELATOR_COLUMNS = CORRELATOR_INDEXING_COLUMNS + ["glue_bins"]
-VEV_INDEXING_COLUMNS = ["MC_Time", "Blocking_index", "Op_index"]
+VEV_INDEXING_COLUMNS = ["MC_Time", "Blocking_index", "Internal"]
 VEV_COLUMNS = VEV_INDEXING_COLUMNS + ["Vac_exp"]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
