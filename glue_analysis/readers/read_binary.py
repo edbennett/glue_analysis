@@ -92,9 +92,13 @@ def _assemble_metadata(
             # if key in final_metadata, it return the entry from there which is
             # fine if and only if that ones equal to `value` again
         ]:
+            conflicts = {
+                key: {"metadata": metadata[key], "header": final_metadata[key]}
+                for key in conflicting_keys
+            }
             raise ParsingError(
-                f"Metadata contains the keys {conflicting_keys} "
-                "which are supposed to be read from the header."
+                "Metadata contains the following entries which differ from"
+                f"the header: {conflicts}."
             )
         final_metadata |= metadata
     return final_metadata
