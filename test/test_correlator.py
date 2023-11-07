@@ -30,7 +30,7 @@ def corr_data() -> CorrelatorData:
                 range(1, LENGTH_OP_INDEX + 1),
                 range(1, LENGTH_OP_INDEX + 1),
             ],
-            names=["Bin_index", "Time", "Op_index1", "Op_index2"],
+            names=["MC_Time", "Time", "Op_index1", "Op_index2"],
         )
         .to_frame()
         .reset_index(drop=True)
@@ -51,7 +51,7 @@ def vev_data() -> CorrelatorData:
                 range(1, LENGTH_BIN_INDEX + 1),
                 range(1, LENGTH_OP_INDEX + 1),
             ],
-            names=["Bin_index", "Op_index"],
+            names=["MC_Time", "Op_index"],
         )
         .to_frame()
         .reset_index(drop=True)
