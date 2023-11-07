@@ -109,7 +109,7 @@ def test_read_correlators_binary_does_not_create_vev_if_not_given(
     corr_file: BinaryIO, filename: str
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
-    assert "vevs" not in dir(answer)
+    assert not hasattr(answer, "vevs")
 
 
 def test_read_correlators_binary_freezes_the_ensemble(

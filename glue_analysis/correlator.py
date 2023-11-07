@@ -107,7 +107,7 @@ class CorrelatorEnsemble:
             logging.warning("Total length not consistent")
             return False
 
-        if "vevs" in dir(self) and not self.has_consistent_vevs:
+        if hasattr(self, "vevs") and not self.has_consistent_vevs:
             return False
 
         return True
@@ -127,7 +127,7 @@ class CorrelatorEnsemble:
         return sorted_vevs.Vac_exp.values.reshape(self.num_bins, self.num_ops)
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
-        if subtract and ("vevs" not in dir(self)):
+        if subtract and hasattr(self, "vevs"):
             raise ValueError("Can't subtract vevs that have not been read.")
 
         array = self.get_numpy()
