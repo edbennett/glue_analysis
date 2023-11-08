@@ -301,3 +301,19 @@ def test_correlator_ensemble_is_frozen_after_freezing(
     unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert unfrozen_corr_ensemble.freeze().frozen
+
+
+def test_correlator_ensemble_does_not_allow_garbage_correlators_on_freezing(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.correlators = "garbage that is no reasonable data"
+    with pytest.raises(ValueError):
+        unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_does_not_allow_garbage_vevs_on_freezing(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.vevs = "garbage that is no reasonable data"
+    with pytest.raises(ValueError):
+        unfrozen_corr_ensemble.freeze()
