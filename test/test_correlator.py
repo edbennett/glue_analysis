@@ -375,3 +375,35 @@ def test_correlator_ensemble_does_not_allow_alteration_of_vevs_after_freezing(
 ) -> None:
     with pytest.raises(FrozenError):
         frozen_corr_ensemble.vevs = vev_data
+
+
+@pytest.mark.parametrize(
+    "column_name", CorrelatorData.get_metadata()[None]["columns"].keys()
+)
+def test_correlator_ensemble_freezing_fails_with_wrong_datatypes(
+    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+) -> None:
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.assign(
+        **{column_name: "str is surely the wrong dtype"}
+    )
+    if column_name.startswith("Internal"):
+        # anything is allowed for internal index
+        unfrozen_corr_ensemble.freeze()
+    else:
+        with pytest.raises(pa.errors.SchemaError):
+            unfrozen_corr_ensemble.freeze()
+
+
+@pytest.mark.parametrize("column_name", VEVData.get_metadata()[None]["columns"].keys())
+def test_correlator_ensemble_freezing_fails_with_wrong_datatypes_in_vevs(
+    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+) -> None:
+    unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.assign(
+        **{column_name: "str is surely the wrong dtype"}
+    )
+    if column_name.startswith("Internal"):
+        # anything is allowed for Internal index
+        unfrozen_corr_ensemble.freeze()
+    else:
+        with pytest.raises(pa.errors.SchemaError):
+            unfrozen_corr_ensemble.freeze()
