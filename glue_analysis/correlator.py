@@ -49,7 +49,7 @@ class CorrelatorEnsemble:
 
     filename: str
     _correlators: DataFrameType[CorrelatorData]
-    vevs: DataFrameType[VEVData]
+    _vevs: DataFrameType[VEVData]
     metadata: dict[str, Any]
     ensemble_name: str
     _frozen: bool = False
@@ -65,15 +65,15 @@ class CorrelatorEnsemble:
                 f"but {type(self._correlators)} was found."
             )
 
-        if hasattr(self, "vevs") and not isinstance(self.vevs, pd.DataFrame):
+        if hasattr(self, "_vevs") and not isinstance(self._vevs, pd.DataFrame):
             raise TypeError(
                 "VEV data is expected to be pandas.Dataframe "
-                f"but {type(self.vevs)} was found."
+                f"but {type(self._vevs)} was found."
             )
 
         CorrelatorData.validate(self._correlators)
-        if hasattr(self, "vevs"):
-            VEVData.validate(self.vevs)
+        if hasattr(self, "_vevs"):
+            VEVData.validate(self._vevs)
         self._frozen = True
         return copy(self)
 
@@ -89,6 +89,22 @@ class CorrelatorEnsemble:
             raise FrozenError(
                 "This instance is frozen. "
                 "You are not allowed to modify correlators anymore."
+            )
+
+    @property
+    def vevs(self: Self) -> DataFrameType[CorrelatorData]:
+        if hasattr(self, "_vevs"):
+            return self._vevs
+        raise AttributeError("Vevs is not set for this instance.")
+
+    @vevs.setter
+    def vevs(self: Self, value: Any) -> None:  # noqa: ANN401
+        if not self.frozen:
+            self._vevs = value
+        else:
+            raise FrozenError(
+                "This instance is frozen. "
+                "You are not allowed to modify vevs anymore."
             )
 
     @property
@@ -164,7 +180,7 @@ class CorrelatorEnsemble:
             logging.warning("Total length not consistent")
             return False
 
-        if hasattr(self, "vevs") and not self.has_consistent_vevs:
+        if hasattr(self, "_vevs") and not self.has_consistent_vevs:
             return False
 
         return True
@@ -180,11 +196,11 @@ class CorrelatorEnsemble:
 
     @only_on_consistent_data
     def get_numpy_vevs(self: Self) -> np.array:
-        sorted_vevs = self.vevs.sort_values(by=["MC_Time", "Internal"])
+        sorted_vevs = self._vevs.sort_values(by=["MC_Time", "Internal"])
         return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_internal)
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
-        if subtract and not hasattr(self, "vevs"):
+        if subtract and not hasattr(self, "_vevs"):
             raise ValueError("Can't subtract vevs that have not been read.")
 
         return pe.Corr(

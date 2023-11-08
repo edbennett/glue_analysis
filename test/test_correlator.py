@@ -7,6 +7,7 @@ import pandas as pd
 import pandera as pa
 import pyerrors as pe
 import pytest
+from pandera.typing import DataFrame as DataFrameType
 
 from glue_analysis.correlator import (
     CorrelatorData,
@@ -207,7 +208,7 @@ def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
 def test_correlator_ensemble_raises_for_subtract_without_vevs_present(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    del frozen_corr_ensemble.vevs
+    del frozen_corr_ensemble._vevs
     with pytest.raises(ValueError):
         frozen_corr_ensemble.get_pyerrors(subtract=True)
 
@@ -350,7 +351,16 @@ def test_correlator_ensemble_freezing_fails_with_missing_column(
 
 
 def test_correlator_ensemble_does_not_allow_alteration_after_freezing(
-    frozen_corr_ensemble: CorrelatorEnsemble, corr_data: CorrelatorData
+    frozen_corr_ensemble: CorrelatorEnsemble,
+    corr_data: DataFrameType[CorrelatorData],
 ) -> None:
     with pytest.raises(FrozenError):
         frozen_corr_ensemble.correlators = corr_data
+
+
+def test_correlator_ensemble_does_not_allow_alteration_of_vevs_after_freezing(
+    frozen_corr_ensemble: CorrelatorEnsemble,
+    vev_data: DataFrameType[VEVData],
+) -> None:
+    with pytest.raises(FrozenError):
+        frozen_corr_ensemble.vevs = vev_data
