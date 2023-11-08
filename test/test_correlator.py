@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pandera as pa
 import pyerrors as pe
 import pytest
 
@@ -307,7 +308,7 @@ def test_correlator_ensemble_is_frozen_after_freezing(
 
 @pytest.mark.parametrize(
     "bad_data",
-    [("garbage that is no reasonable data",), (42,), (np.arange(10),)],
+    ["garbage that is no reasonable data", 42, np.arange(10)],
     ids=["str", "int", "np.array"],
 )
 def test_correlator_ensemble_does_not_allow_garbage_correlators_on_freezing(
@@ -315,13 +316,13 @@ def test_correlator_ensemble_does_not_allow_garbage_correlators_on_freezing(
     bad_data: Any,  # noqa: ANN401
 ) -> None:
     unfrozen_corr_ensemble.correlators = bad_data
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         unfrozen_corr_ensemble.freeze()
 
 
 @pytest.mark.parametrize(
     "bad_data",
-    [("garbage that is no reasonable data",), (42,), (np.arange(10),)],
+    ["garbage that is no reasonable data", 42, np.arange(10)],
     ids=["str", "int", "np.array"],
 )
 def test_correlator_ensemble_does_not_allow_garbage_vevs_on_freezing(
@@ -329,13 +330,14 @@ def test_correlator_ensemble_does_not_allow_garbage_vevs_on_freezing(
     bad_data: Any,  # noqa: ANN401
 ) -> None:
     unfrozen_corr_ensemble.vevs = bad_data
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         unfrozen_corr_ensemble.freeze()
 
 
+@pytest.mark.parametrize("column_name", ["MC_Time", "Time", "Internal1", "Internal2"])
 def test_correlator_ensemble_freezing_fails_with_missing_column(
-    unfrozen_corr_ensemble: CorrelatorEnsemble,
+    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
 ) -> None:
-    unfrozen_corr_ensemble.correlators.drop("MC_Time", axis="columns", inplace=True)
-    with pytest.raises(ValueError):
+    unfrozen_corr_ensemble.correlators.drop(column_name, axis="columns", inplace=True)
+    with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()

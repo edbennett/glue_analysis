@@ -7,11 +7,24 @@ from typing import Any, Self
 
 import numpy as np
 import pandas as pd
+import pandera as pa
 import pyerrors as pe
 
 # for type hints, not really enforced as of now:
-CorrelatorData = pd.DataFrame
-VEVData = pd.DataFrame
+CorrelatorData = pa.DataFrameSchema(
+    {
+        "MC_Time": pa.Column(int),
+        "Time": pa.Column(int),
+        "Internal1": pa.Column(),
+        "Internal2": pa.Column(),
+    }
+)
+VEVData = pa.DataFrameSchema(
+    {
+        "MC_Time": pa.Column(int),
+        "Internal": pa.Column(),
+    }
+)
 
 
 def only_on_consistent_data(func: Callable) -> Callable:
@@ -42,12 +55,20 @@ class CorrelatorEnsemble:
 
     def freeze(self: Self) -> Self:
         if not isinstance(self.correlators, pd.DataFrame):
-            raise ValueError("Correlator data has wrong type.")
-        if hasattr(self, "vevs") and not isinstance(self.vevs, pd.DataFrame):
-            raise ValueError("VEV data has wrong type.")
-        if "MC_Time" not in self.correlators:
-            raise ValueError("MC_Time column is missing.")
+            raise TypeError(
+                "Correlator data is expected to be pandas.Dataframe "
+                f"but {type(self.correlators)} was found."
+            )
 
+        if hasattr(self, "vevs") and not isinstance(self.vevs, pd.DataFrame):
+            raise TypeError(
+                "VEV data is expected to be pandas.Dataframe "
+                f"but {type(self.vevs)} was found."
+            )
+
+        CorrelatorData.validate(self.correlators)
+        if hasattr(self, "vevs"):
+            VEVData.validate(self.vevs)
         self._frozen = True
         return copy(self)
 
