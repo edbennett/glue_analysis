@@ -11,19 +11,35 @@ import pandera as pa
 import pyerrors as pe
 from pandera.typing import DataFrame as DataFrameType
 
-# for type hints, not really enforced as of now:
+_DESCRIPTIONS = {
+    "MC_Time": "Index enumerating the Monte Carlo samples.",
+    "Time": "Physical euclidean time coordinate "
+    "along which correlation is measured.",
+    "Internal": "Any further internal structure, e.g.,"
+    "an index enumerating interpolating operators, "
+    "a blocking or smearing level, "
+    "or any combination thereof.",
+    "Correlation": "Measured values of the correlators.",
+    "Vac_exp": "Measured values of the vacuum expectation values (VEVs).",
+}
 CorrelatorData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(int),
-        "Time": pa.Column(int),
-        "Internal1": pa.Column(),
-        "Internal2": pa.Column(),
+        "MC_Time": pa.Column(int, required=True, description=_DESCRIPTIONS["MC_Time"]),
+        "Time": pa.Column(int, required=True, description=_DESCRIPTIONS["Time"]),
+        "Internal1": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
+        "Internal2": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
+        "Correlation": pa.Column(
+            float, required=True, description=_DESCRIPTIONS["Correlation"]
+        ),
     }
 )
 VEVData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(int),
-        "Internal": pa.Column(),
+        "MC_Time": pa.Column(int, required=True, description=_DESCRIPTIONS["MC_Time"]),
+        "Internal": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
+        "Vac_exp": pa.Column(
+            float, required=True, description=_DESCRIPTIONS["Vac_exp"]
+        ),
     }
 )
 
