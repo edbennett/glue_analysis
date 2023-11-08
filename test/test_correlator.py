@@ -331,3 +331,11 @@ def test_correlator_ensemble_does_not_allow_garbage_vevs_on_freezing(
     unfrozen_corr_ensemble.vevs = bad_data
     with pytest.raises(ValueError):
         unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_freezing_fails_with_missing_column(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.correlators.drop("MC_Time", axis="columns", inplace=True)
+    with pytest.raises(ValueError):
+        unfrozen_corr_ensemble.freeze()

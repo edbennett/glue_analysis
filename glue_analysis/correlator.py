@@ -45,6 +45,8 @@ class CorrelatorEnsemble:
             raise ValueError("Correlator data has wrong type.")
         if hasattr(self, "vevs") and not isinstance(self.vevs, pd.DataFrame):
             raise ValueError("VEV data has wrong type.")
+        if "MC_Time" not in self.correlators:
+            raise ValueError("MC_Time column is missing.")
 
         self._frozen = True
         return copy(self)
