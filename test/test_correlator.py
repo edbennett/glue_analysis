@@ -11,6 +11,7 @@ import pytest
 from glue_analysis.correlator import (
     CorrelatorData,
     CorrelatorEnsemble,
+    FrozenError,
     VEVData,
     to_obs_array,
 )
@@ -63,7 +64,7 @@ def vev_data() -> CorrelatorData:
 
 
 @pytest.fixture()
-def corr_ensemble(
+def frozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
     return create_corr_ensemble(filename, corr_data, vev_data, True)
@@ -128,14 +129,16 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
     ids=["NT", "num_internal", "num_samples"],
 )
 def test_correlator_ensemble_reports_correct_properties(
-    corr_ensemble: CorrelatorEnsemble, prop: str, value: int
+    unfrozen_corr_ensemble: CorrelatorEnsemble, prop: str, value: int
 ) -> None:
-    assert getattr(corr_ensemble, prop) == value
+    assert getattr(unfrozen_corr_ensemble, prop) == value
     # The following violates One-assert-per-test rule but significantly
     # outweighs that on DRY.
     # Scramble as a second test:
-    corr_ensemble.correlators = corr_ensemble.correlators.sample(frac=1)
-    assert getattr(corr_ensemble, prop) == value
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.sample(
+        frac=1
+    )
+    assert getattr(unfrozen_corr_ensemble, prop) == value
 
 
 # We don't test the consistency checks at this point. They are extensive and
@@ -144,9 +147,9 @@ def test_correlator_ensemble_reports_correct_properties(
 
 
 def test_correlator_ensemble_returns_correctly_shaped_numpy(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    assert corr_ensemble.get_numpy().shape == (
+    assert frozen_corr_ensemble.get_numpy().shape == (
         LENGTH_MC_TIME,
         LENGTH_TIME,
         LENGTH_INTERNAL,
@@ -155,61 +158,65 @@ def test_correlator_ensemble_returns_correctly_shaped_numpy(
 
 
 def test_correlator_ensemble_returns_correct_numpy_data(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert (
-        corr_ensemble.get_numpy().reshape(-1)
-        == corr_ensemble.correlators["Correlation"].values
+        frozen_corr_ensemble.get_numpy().reshape(-1)
+        == frozen_corr_ensemble.correlators["Correlation"].values
     ).all()
 
 
 def test_correlator_ensemble_returns_sorted_numpy_data(
-    corr_ensemble: CorrelatorEnsemble,
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    expected = corr_ensemble.correlators["Correlation"].values
-    corr_ensemble.correlators = corr_ensemble.correlators.sample(frac=1)
-    assert (corr_ensemble.get_numpy().reshape(-1) == expected).all()
+    expected = unfrozen_corr_ensemble.correlators["Correlation"].values
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.sample(
+        frac=1
+    )
+    assert (unfrozen_corr_ensemble.freeze().get_numpy().reshape(-1) == expected).all()
 
 
 def test_correlator_ensemble_returns_correctly_shaped_numpy_vevs(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    assert corr_ensemble.get_numpy_vevs().shape == (
+    assert frozen_corr_ensemble.get_numpy_vevs().shape == (
         LENGTH_MC_TIME,
         LENGTH_INTERNAL,
     )
 
 
 def test_correlator_ensemble_returns_correct_numpy_data_for_vevs(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert (
-        corr_ensemble.get_numpy_vevs().reshape(-1)
-        == corr_ensemble.vevs["Vac_exp"].values
+        frozen_corr_ensemble.get_numpy_vevs().reshape(-1)
+        == frozen_corr_ensemble.vevs["Vac_exp"].values
     ).all()
 
 
 def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
-    corr_ensemble: CorrelatorEnsemble,
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    expected = corr_ensemble.vevs["Vac_exp"].values
-    corr_ensemble.vevs = corr_ensemble.vevs.sample(frac=1)
-    assert (corr_ensemble.get_numpy_vevs().reshape(-1) == expected).all()
+    expected = unfrozen_corr_ensemble.vevs["Vac_exp"].values
+    unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.sample(frac=1)
+    assert (
+        unfrozen_corr_ensemble.freeze().get_numpy_vevs().reshape(-1) == expected
+    ).all()
 
 
 def test_correlator_ensemble_raises_for_subtract_without_vevs_present(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    del corr_ensemble.vevs
+    del frozen_corr_ensemble.vevs
     with pytest.raises(ValueError):
-        corr_ensemble.get_pyerrors(subtract=True)
+        frozen_corr_ensemble.get_pyerrors(subtract=True)
 
 
 def test_correlator_ensemble_returned_correlator_has_correct_averages(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    corr = corr_ensemble.get_pyerrors()
-    corr_np = corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
+    corr = frozen_corr_ensemble.get_pyerrors()
+    corr_np = frozen_corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
     for i in range(LENGTH_INTERNAL):
         for j in range(LENGTH_INTERNAL):
             # not a perfect test: check for each entry of correlation matrix
@@ -218,17 +225,17 @@ def test_correlator_ensemble_returned_correlator_has_correct_averages(
 
 
 def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    corr = corr_ensemble.get_pyerrors(subtract=True)
-    corr_np = corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
-    vevs_np = corr_ensemble.get_numpy_vevs().mean(axis=MC_TIME_AXIS)
+    corr = frozen_corr_ensemble.get_pyerrors(subtract=True)
+    corr_np = frozen_corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
+    vevs_np = frozen_corr_ensemble.get_numpy_vevs().mean(axis=MC_TIME_AXIS)
     for i in range(LENGTH_INTERNAL):
         for j in range(LENGTH_INTERNAL):
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (
-                corr_np[:, i, j] - vevs_np[i] * vevs_np[j] / corr_ensemble.NT**2
+                corr_np[:, i, j] - vevs_np[i] * vevs_np[j] / frozen_corr_ensemble.NT**2
                 == corr.item(i, j).plottable()[1]
             ).all()
 
@@ -239,16 +246,15 @@ def test_correlator_ensemble_has_configurable_ensemble_name(
     ensemble_name = "some-other-name"
     corr_ensemble = CorrelatorEnsemble(filename, ensemble_name=ensemble_name)
     corr_ensemble.correlators = corr_data
-    corr_ensemble._frozen = True
-    assert corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
+    assert corr_ensemble.freeze().get_pyerrors().item(0, 0).content[0][0].e_names == [
         ensemble_name
     ]
 
 
 def test_correlator_ensemble_defaults_to_glue_bins_as_ensemble_name(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    assert corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
+    assert frozen_corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
         "glue_bins"
     ]
 
@@ -341,3 +347,10 @@ def test_correlator_ensemble_freezing_fails_with_missing_column(
     unfrozen_corr_ensemble.correlators.drop(column_name, axis="columns", inplace=True)
     with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_does_not_allow_alteration_after_freezing(
+    frozen_corr_ensemble: CorrelatorEnsemble, corr_data: CorrelatorData
+) -> None:
+    with pytest.raises(FrozenError):
+        frozen_corr_ensemble.correlators = corr_data
