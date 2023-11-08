@@ -63,10 +63,23 @@ def vev_data() -> CorrelatorData:
 def corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
+    return create_corr_ensemble(filename, corr_data, vev_data, True)
+
+
+@pytest.fixture()
+def unfrozen_corr_ensemble(
+    filename: str, corr_data: CorrelatorData, vev_data: VEVData
+) -> CorrelatorEnsemble:
+    return create_corr_ensemble(filename, corr_data, vev_data, False)
+
+
+def create_corr_ensemble(
+    filename: str, corr_data: CorrelatorData, vev_data: VEVData, frozen: bool
+) -> CorrelatorEnsemble:
     corr_ensemble = CorrelatorEnsemble(filename)
     corr_ensemble.correlators = corr_data
     corr_ensemble.vevs = vev_data
-    corr_ensemble._frozen = True
+    corr_ensemble._frozen = frozen
     return corr_ensemble
 
 
@@ -74,12 +87,11 @@ def test_correlator_ensemble_stores_filename() -> None:
     assert CorrelatorEnsemble("filename").filename == "filename"
 
 
-@pytest.mark.xfail(reason="To be implemented later", strict=True)
 def test_correlator_ensemble_allows_to_set_correlators_as_garbage() -> None:
-    with pytest.raises(ValueError):
-        CorrelatorEnsemble(
-            "filename"
-        ).correlators = "garbage that will be forbidden later"
+    # we decided to allow this because validation will be implemented in the
+    # freeze method
+    CorrelatorEnsemble("filename").correlators = "garbage that will be forbidden later"
+    # reaching this point means it didn't raise
 
 
 def test_correlator_ensemble_allows_to_set_correlators_with_correct_data(
@@ -89,10 +101,11 @@ def test_correlator_ensemble_allows_to_set_correlators_with_correct_data(
     # reaching this point means it didn't raise
 
 
-@pytest.mark.xfail(reason="To be implemented later", strict=True)
 def test_correlator_ensemble_allows_to_set_vevs_as_garbage() -> None:
-    with pytest.raises(ValueError):
-        CorrelatorEnsemble("filename").vevs = "garbage that will be forbidden later"
+    # we decided to allow this because validation will be implemented in the
+    # freeze method
+    CorrelatorEnsemble("filename").vevs = "garbage that will be forbidden later"
+    # reaching this point means it didn't raise
 
 
 def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
@@ -279,3 +292,12 @@ def test_to_obs_array_works_on_four_dimensional_arrays() -> None:
             ]
         )
     ).all()
+
+
+### freezing and validation
+
+
+def test_correlator_ensemble_is_frozen_after_freezing(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    assert unfrozen_corr_ensemble.freeze().frozen

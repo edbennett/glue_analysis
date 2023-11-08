@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Callable
+from copy import copy
 from typing import Any, Self
 
 import numpy as np
@@ -38,6 +39,14 @@ class CorrelatorEnsemble:
     def __init__(self: Self, filename: str, ensemble_name: str | None = None) -> None:
         self.filename = filename
         self.ensemble_name = ensemble_name if ensemble_name else "glue_bins"
+
+    def freeze(self: Self) -> Self:
+        self._frozen = True
+        return copy(self)
+
+    @property
+    def frozen(self: Self) -> bool:
+        return self._frozen
 
     @property
     def NT(self: Self) -> int:
