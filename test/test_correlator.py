@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import pyerrors as pe
@@ -303,17 +305,29 @@ def test_correlator_ensemble_is_frozen_after_freezing(
     assert unfrozen_corr_ensemble.freeze().frozen
 
 
+@pytest.mark.parametrize(
+    "bad_data",
+    [("garbage that is no reasonable data",), (42,), (np.arange(10),)],
+    ids=["str", "int", "np.array"],
+)
 def test_correlator_ensemble_does_not_allow_garbage_correlators_on_freezing(
     unfrozen_corr_ensemble: CorrelatorEnsemble,
+    bad_data: Any,  # noqa: ANN401
 ) -> None:
-    unfrozen_corr_ensemble.correlators = "garbage that is no reasonable data"
+    unfrozen_corr_ensemble.correlators = bad_data
     with pytest.raises(ValueError):
         unfrozen_corr_ensemble.freeze()
 
 
+@pytest.mark.parametrize(
+    "bad_data",
+    [("garbage that is no reasonable data",), (42,), (np.arange(10),)],
+    ids=["str", "int", "np.array"],
+)
 def test_correlator_ensemble_does_not_allow_garbage_vevs_on_freezing(
     unfrozen_corr_ensemble: CorrelatorEnsemble,
+    bad_data: Any,  # noqa: ANN401
 ) -> None:
-    unfrozen_corr_ensemble.vevs = "garbage that is no reasonable data"
+    unfrozen_corr_ensemble.vevs = bad_data
     with pytest.raises(ValueError):
         unfrozen_corr_ensemble.freeze()

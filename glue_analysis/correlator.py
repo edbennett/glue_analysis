@@ -41,9 +41,9 @@ class CorrelatorEnsemble:
         self.ensemble_name = ensemble_name if ensemble_name else "glue_bins"
 
     def freeze(self: Self) -> Self:
-        if isinstance(self.correlators, str):
+        if not isinstance(self.correlators, pd.DataFrame):
             raise ValueError("Correlator data has wrong type.")
-        if hasattr(self, "vevs") and isinstance(self.vevs, str):
+        if hasattr(self, "vevs") and not isinstance(self.vevs, pd.DataFrame):
             raise ValueError("VEV data has wrong type.")
 
         self._frozen = True
