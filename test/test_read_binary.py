@@ -38,7 +38,7 @@ def columns_from_header(header: dict[str, int], vev: bool = False) -> pd.DataFra
             range(1, header["Nop"] + 1),  # Op_index2
             range(1, int(header["LT"] / 2 + 1) + 1),  # Time
         ]
-    tmp = (
+    ungrouped_columns = (
         pd.MultiIndex.from_product(
             index_ranges,
             names=VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS,
@@ -49,19 +49,25 @@ def columns_from_header(header: dict[str, int], vev: bool = False) -> pd.DataFra
     if vev:
         assignments = {
             "Internal": list(
-                tmp[["Internal", "Blocking_index"]].itertuples(index=False)
+                ungrouped_columns[["Internal", "Blocking_index"]].itertuples(
+                    index=False
+                )
             )
         }
     else:
         assignments = {
             "Internal1": list(
-                tmp[["Internal1", "Blocking_index1"]].itertuples(index=False)
+                ungrouped_columns[["Internal1", "Blocking_index1"]].itertuples(
+                    index=False
+                )
             ),
             "Internal2": list(
-                tmp[["Internal2", "Blocking_index2"]].itertuples(index=False)
+                ungrouped_columns[["Internal2", "Blocking_index2"]].itertuples(
+                    index=False
+                )
             ),
         }
-    return tmp.assign(**assignments).drop(
+    return ungrouped_columns.assign(**assignments).drop(
         ["Blocking_index", "Blocking_index1", "Blocking_index2"],
         errors="ignore",
         axis="columns",
