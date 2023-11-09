@@ -35,16 +35,40 @@ def _read_correlators_fortran(
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
-    correlators.correlators = pd.read_csv(corr_file, delim_whitespace=True)
+    correlators.correlators = pd.read_csv(
+        corr_file,
+        delim_whitespace=True,
+        converters={
+            "Bin_index": int,
+            "Time": int,
+            "Op_index1": int,
+            "Op_index2": int,
+            "Correlation": float,
+        },
+    ).rename(
+        {
+            "Bin_index": "MC_Time",
+            "Time": "Time",
+            "Op_index1": "Internal1",
+            "Op_index2": "Internal2",
+        },
+        axis="columns",
+    )
     correlators.correlators["channel"] = channel
     if vev_file:
-        correlators.vevs = pd.read_csv(vev_file, delim_whitespace=True)
+        correlators.vevs = pd.read_csv(
+            vev_file,
+            delim_whitespace=True,
+            converters={"Bin_index": int, "Op_index": int, "Vac_exp": float},
+        ).rename(
+            {"Bin_index": "MC_Time", "Time": "Time", "Op_index": "Internal"},
+            axis="columns",
+        )
         correlators.vevs["channel"] = channel
 
     if not metadata:
         metadata = {}
 
     correlators.metadata = metadata
-    correlators._frozen = True
 
-    return correlators
+    return correlators.freeze()
