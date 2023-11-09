@@ -28,6 +28,9 @@ _DESCRIPTIONS = {
     #
     "Check_Internals_equal": "Internal1 and Internal2 are supposed to form"
     "square matrix, so they must be identical up to reordering.",
+    #
+    "Check_unique_indexing": "The index columns are supposed "
+    "to make for a unique index.",
 }
 CorrelatorData = pa.DataFrameSchema(
     {
@@ -39,12 +42,21 @@ CorrelatorData = pa.DataFrameSchema(
             float, required=True, description=_DESCRIPTIONS["Correlation"]
         ),
     },
-    checks=pa.Check(
-        lambda df: (
-            df["Internal1"].sort_values().values == df["Internal2"].sort_values().values
-        ).all(),
-        description=_DESCRIPTIONS["Check_Internals_equal"],
-    ),
+    checks=[
+        pa.Check(
+            lambda df: (
+                df["Internal1"].sort_values().values
+                == df["Internal2"].sort_values().values
+            ).all(),
+            description=_DESCRIPTIONS["Check_Internals_equal"],
+        ),
+        pa.Check(
+            lambda df: not df[["MC_Time", "Time", "Internal1", "Internal2"]]
+            .duplicated()
+            .any(),
+            description=_DESCRIPTIONS["Check_unique_indexing"],
+        ),
+    ],
 )
 VEVData = pa.DataFrameSchema(
     {

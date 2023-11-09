@@ -378,23 +378,24 @@ def test_correlator_ensemble_does_not_allow_alteration_of_vevs_after_freezing(
 
 
 @pytest.mark.parametrize(
-    "column_name", CorrelatorData.get_metadata()[None]["columns"].keys()
+    "column_name",
+    filter(
+        lambda s: not s.startswith("Internal"),  # anything is allowed for Internal
+        CorrelatorData.get_metadata()[None]["columns"].keys(),
+    ),
 )
 def test_correlator_ensemble_freezing_fails_with_wrong_datatypes(
     unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
 ) -> None:
-    if column_name.startswith("Internal"):
-        unfrozen_corr_ensemble.correlators[
-            ["Internal1", "Internal2"]
-        ] = "str is surely the wrong dtype"
-        # anything is allowed for internal index
+    unfrozen_corr_ensemble.correlators[column_name] = "str is surely the wrong dtype"
+    # make sure to not trigger other checks
+    unfrozen_corr_ensemble.correlators = (
+        unfrozen_corr_ensemble.correlators.drop_duplicates(
+            subset=["MC_Time", "Time", "Internal1", "Internal2"], keep="first"
+        )
+    )
+    with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
-    else:
-        unfrozen_corr_ensemble.correlators[
-            column_name
-        ] = "str is surely the wrong dtype"
-        with pytest.raises(pa.errors.SchemaError):
-            unfrozen_corr_ensemble.freeze()
 
 
 @pytest.mark.parametrize("column_name", VEVData.get_metadata()[None]["columns"].keys())
@@ -417,5 +418,16 @@ def test_correlator_ensemble_freezing_fails_if_internals_differ_in_content(
 ) -> None:
     # different from Internal1
     unfrozen_corr_ensemble.correlators.loc[0, "Internal2"] = 2
+    with pytest.raises(pa.errors.SchemaError):
+        unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_fails_if_indexing_rows_are_not_unique(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    corr = unfrozen_corr_ensemble.correlators
+    # Carefully chosen: Internal1 must be indentical to Internal2 otherwise
+    # another check is triggered, too.
+    corr.loc[0] = corr.loc[4]
     with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
