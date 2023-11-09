@@ -25,6 +25,9 @@ _DESCRIPTIONS = {
     "Correlation": "Measured values of the correlators.",
     #
     "Vac_exp": "Measured values of the vacuum expectation values (VEVs).",
+    #
+    "Check_Internals_equal": "Internal1 and Internal2 are supposed to form"
+    "square matrix, so they must be identical up to reordering.",
 }
 CorrelatorData = pa.DataFrameSchema(
     {
@@ -35,7 +38,13 @@ CorrelatorData = pa.DataFrameSchema(
         "Correlation": pa.Column(
             float, required=True, description=_DESCRIPTIONS["Correlation"]
         ),
-    }
+    },
+    checks=pa.Check(
+        lambda df: (
+            df["Internal1"].sort_values().values == df["Internal2"].sort_values().values
+        ).all(),
+        description=_DESCRIPTIONS["Check_Internals_equal"],
+    ),
 )
 VEVData = pa.DataFrameSchema(
     {

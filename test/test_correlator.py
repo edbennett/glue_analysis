@@ -383,13 +383,16 @@ def test_correlator_ensemble_does_not_allow_alteration_of_vevs_after_freezing(
 def test_correlator_ensemble_freezing_fails_with_wrong_datatypes(
     unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
 ) -> None:
-    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.assign(
-        **{column_name: "str is surely the wrong dtype"}
-    )
     if column_name.startswith("Internal"):
+        unfrozen_corr_ensemble.correlators[
+            ["Internal1", "Internal2"]
+        ] = "str is surely the wrong dtype"
         # anything is allowed for internal index
         unfrozen_corr_ensemble.freeze()
     else:
+        unfrozen_corr_ensemble.correlators[
+            column_name
+        ] = "str is surely the wrong dtype"
         with pytest.raises(pa.errors.SchemaError):
             unfrozen_corr_ensemble.freeze()
 
@@ -407,3 +410,12 @@ def test_correlator_ensemble_freezing_fails_with_wrong_datatypes_in_vevs(
     else:
         with pytest.raises(pa.errors.SchemaError):
             unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_freezing_fails_if_internals_differ_in_content(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    # different from Internal1
+    unfrozen_corr_ensemble.correlators.loc[0, "Internal2"] = 2
+    with pytest.raises(pa.errors.SchemaError):
+        unfrozen_corr_ensemble.freeze()
