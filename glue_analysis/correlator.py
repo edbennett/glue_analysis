@@ -65,7 +65,13 @@ VEVData = pa.DataFrameSchema(
         "Vac_exp": pa.Column(
             float, required=True, description=_DESCRIPTIONS["Vac_exp"]
         ),
-    }
+    },
+    checks=[
+        pa.Check(
+            lambda df: not df[["MC_Time", "Internal"]].duplicated().any(),
+            description=_DESCRIPTIONS["Check_unique_indexing"],
+        ),
+    ],
 )
 
 
