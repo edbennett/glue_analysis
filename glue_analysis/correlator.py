@@ -2,7 +2,6 @@
 
 import logging
 from collections.abc import Callable
-from copy import copy
 from typing import Any, Self
 
 import numpy as np
@@ -96,7 +95,7 @@ class CorrelatorEnsemble:
         if hasattr(self, "_vevs"):
             VEVData.validate(self._vevs)
         self._frozen = True
-        return copy(self)
+        return self
 
     @property
     def correlators(self: Self) -> DataFrameType[CorrelatorData]:
