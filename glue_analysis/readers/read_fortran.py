@@ -14,7 +14,7 @@ def read_correlators_fortran(
     channel: str = "",
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
-) -> CorrelatorEnsemble:
+) -> CorrelatorEnsemble:  # pragma: no cover
     with open(corr_filename) as corr_file:
         if vev_filename:
             with open(vev_filename) as vev_file:

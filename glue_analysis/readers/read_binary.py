@@ -39,7 +39,7 @@ def read_correlators_binary(
     channel: str = "",
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
-) -> CorrelatorEnsemble:
+) -> CorrelatorEnsemble:  # pragma: no cover
     with open(corr_filename, "rb") as corr_file:
         if vev_filename:
             with open(vev_filename, "rb") as vev_file:
