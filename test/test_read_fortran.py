@@ -32,7 +32,7 @@ def vev_columns() -> list[str]:
 
 def create_data(columns: list[str]) -> np.array:
     indexing_data = np.array(
-        [x for x in itertools.product(*[range(5) for col in columns[:-1]])]
+        list(itertools.product(*[range(5) for col in columns[:-1]]))
     )
     return np.concatenate(
         [indexing_data, np.arange(indexing_data.shape[0]).reshape(-1, 1)], axis=1
