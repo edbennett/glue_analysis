@@ -192,48 +192,18 @@ class CorrelatorEnsemble:
 
     @property
     def has_consistent_vevs(self: Self) -> bool:
-        if max(self.vevs.Internal) != self.num_internal:
-            logging.warning("Wrong number of internal dof in vevs")
-            return False
-        if len(set(self.vevs.Internal)) != self.num_internal:
-            logging.warning("Missing internal dof in vevs")
-
         if max(self.vevs.MC_Time) != self.num_samples:
             logging.warning("Wrong number of samples in vevs")
             return False
         if len(set(self.vevs.MC_Time)) != self.num_samples:
             logging.warning("Missing samples in vevs")
             return False
-
-        for internal in range(1, self.num_internal + 1):
-            for sample in range(1, self.num_samples + 1):
-                if (
-                    sum(
-                        (self.vevs.Internal == internal) & (self.vevs.MC_Time == sample)
-                    )
-                    != 1
-                ):
-                    logging.warning(f"Missing {internal=}, {sample=} in vevs")
-                    return False
-
         return True
 
     @property
     def is_consistent(self: Self) -> bool:
         if not self._frozen:
             raise ValueError("Data must be frozen to check consistency.")
-        if max(self._correlators.Internal2) != self.num_internal:
-            logging.warning("Inconsistent numbers of internal")
-            return False
-        if set(self._correlators.Internal2) != set(self._correlators.Internal1):
-            logging.warning("Inconsistent internal dof pairings")
-            return False
-        if len(set(self._correlators.Internal1)) != self.num_internal:
-            logging.warning("Internal1 missing one or more internal")
-            return False
-        if len(set(self._correlators.Internal2)) != self.num_internal:
-            logging.warning("Internal2 missing one or more internal")
-            return False
 
         if len(set(self._correlators.Time)) != self.NT:
             logging.warning("Missing time slices")
