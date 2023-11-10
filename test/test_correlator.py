@@ -122,7 +122,7 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
 
 
 @pytest.mark.parametrize(
-    "prop,value",
+    ("prop", "value"),
     [
         ("NT", LENGTH_TIME),
         ("num_internal", LENGTH_INTERNAL),
@@ -205,7 +205,9 @@ def test_correlator_ensemble_raises_for_subtract_without_vevs_present(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     del frozen_corr_ensemble._vevs
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Can't subtract vevs that have not been read."
+    ):
         frozen_corr_ensemble.get_pyerrors(subtract=True)
 
 
@@ -260,7 +262,7 @@ def test_correlator_ensemble_defaults_to_glue_bins_as_ensemble_name(
 
 
 @pytest.mark.parametrize(
-    "data,ensemble_name",
+    ("data", "ensemble_name"),
     [
         (np.ones(10), "some-name"),
         (np.ones(10), "other-name"),
