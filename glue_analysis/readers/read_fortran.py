@@ -5,7 +5,7 @@ from typing import Any, TextIO
 
 import pandas as pd
 
-from ..correlator import CorrelatorEnsemble
+from glue_analysis.correlator import CorrelatorEnsemble
 
 
 @lru_cache(maxsize=8)

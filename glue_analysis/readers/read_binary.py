@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pandera.typing import DataFrame as DataFrameType
 
-from ..correlator import CorrelatorData, CorrelatorEnsemble, VEVData
+from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
 
 LENGTH_OF_CORRELATOR_INDEXING = {
     "MC_Time": lambda header: header["Nbin"],
