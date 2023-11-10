@@ -141,7 +141,7 @@ def test_read_correlators_binary_freezes_the_ensemble(
     corr_file: BinaryIO, filename: str
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
-    assert answer._frozen
+    assert answer.frozen
 
 
 ### Actually functional behavior

@@ -85,7 +85,8 @@ def create_corr_ensemble(
     corr_ensemble = CorrelatorEnsemble(filename)
     corr_ensemble.correlators = corr_data
     corr_ensemble.vevs = vev_data
-    corr_ensemble._frozen = frozen
+    if frozen:
+        corr_ensemble.freeze()
     return corr_ensemble
 
 

@@ -105,7 +105,7 @@ def test_read_correlators_fortran_freezes_the_ensemble(
     full_file: TextIO, filename: str
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert answer._frozen
+    assert answer.frozen
 
 
 ### Actually functional behavior
