@@ -51,8 +51,8 @@ CorrelatorData = pa.DataFrameSchema(
     checks=[
         pa.Check(
             lambda df: (
-                df["Internal1"].sort_values().values
-                == df["Internal2"].sort_values().values
+                df["Internal1"].sort_values().to_numpy()
+                == df["Internal2"].sort_values().to_numpy()
             ).all(),
             description=_CHECK_DESCRIPTIONS["Check_Internals_equal"],
             name="Check_Internals_equal",
@@ -103,8 +103,8 @@ def cross_validate(
         # It's sufficient to check this one way round (and not with Internal1/2
         # interchanged) because their consistency is assured from other checks.
         corr.groupby(by=["Time", "Internal2"]).apply(
-            lambda df: sorted(df[["MC_Time", "Internal1"]].values.tolist())
-            == sorted(vevs[["MC_Time", "Internal"]].values.tolist())
+            lambda df: sorted(df[["MC_Time", "Internal1"]].to_numpy().tolist())
+            == sorted(vevs[["MC_Time", "Internal"]].to_numpy().tolist())
         )
     ).all():
         raise DataInconsistencyError(
@@ -199,13 +199,15 @@ class CorrelatorEnsemble:
         sorted_correlators = self._correlators.sort_values(
             by=["MC_Time", "Time", "Internal1", "Internal2"]
         )
-        return sorted_correlators.Correlation.values.reshape(
+        return sorted_correlators.Correlation.to_numpy().reshape(
             self.num_samples, self.NT, self.num_internal, self.num_internal
         )
 
     def get_numpy_vevs(self: Self) -> np.array:
         sorted_vevs = self._vevs.sort_values(by=["MC_Time", "Internal"])
-        return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_internal)
+        return sorted_vevs.Vac_exp.to_numpy().reshape(
+            self.num_samples, self.num_internal
+        )
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
         if subtract and not hasattr(self, "_vevs"):

@@ -130,11 +130,11 @@ def test_read_correlators_fortran_preserves_data(
     full_file: TextIO, filename: str, data: np.array
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert (answer.correlators.drop("channel", axis=1).values == data).all()
+    assert (answer.correlators.drop("channel", axis=1).to_numpy() == data).all()
 
 
 def test_read_correlators_fortran_preserves_data_in_vev(
     full_file: TextIO, filename: str, vev_data: np.array, vev_file: TextIO
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename, vev_file=vev_file)
-    assert (answer.vevs.drop("channel", axis="columns").values == vev_data).all()
+    assert (answer.vevs.drop("channel", axis="columns").to_numpy() == vev_data).all()
