@@ -37,7 +37,6 @@ class ParsingError(Exception):
 
 def read_correlators_binary(
     corr_filename: str,
-    channel: str = "",
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
@@ -45,18 +44,15 @@ def read_correlators_binary(
         if vev_filename:
             with Path(vev_filename).open("rb") as vev_file:
                 return _read_correlators_binary(
-                    corr_file, corr_filename, channel, vev_file, metadata
+                    corr_file, corr_filename, vev_file, metadata
                 )
 
-        return _read_correlators_binary(
-            corr_file, corr_filename, channel, None, metadata
-        )
+        return _read_correlators_binary(corr_file, corr_filename, None, metadata)
 
 
 def _read_correlators_binary(
     corr_file: BinaryIO,
     filename: str,
-    channel: str = "",
     vev_file: BinaryIO | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
