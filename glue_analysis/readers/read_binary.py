@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 from typing import Any, BinaryIO
 
 import numpy as np
@@ -40,9 +41,9 @@ def read_correlators_binary(
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
-    with open(corr_filename, "rb") as corr_file:
+    with Path(corr_filename).open("rb") as corr_file:
         if vev_filename:
-            with open(vev_filename, "rb") as vev_file:
+            with Path(vev_filename).open("rb") as vev_file:
                 return _read_correlators_binary(
                     corr_file, corr_filename, channel, vev_file, metadata
                 )

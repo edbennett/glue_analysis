@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, TextIO
 
 import pandas as pd
@@ -15,9 +16,9 @@ def read_correlators_fortran(
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
-    with open(corr_filename) as corr_file:
+    with Path(corr_filename).open() as corr_file:
         if vev_filename:
-            with open(vev_filename) as vev_file:
+            with Path(vev_filename).open() as vev_file:
                 return _read_correlators_fortran(
                     corr_file, corr_filename, channel, vev_file, metadata
                 )
