@@ -49,12 +49,14 @@ CorrelatorData = pa.DataFrameSchema(
                 == df["Internal2"].sort_values().values
             ).all(),
             description=_DESCRIPTIONS["Check_Internals_equal"],
+            name="Check_Internals_equal",
         ),
         pa.Check(
             lambda df: not df[["MC_Time", "Time", "Internal1", "Internal2"]]
             .duplicated()
             .any(),
             description=_DESCRIPTIONS["Check_unique_indexing"],
+            name="Check_unique_indexing",
         ),
     ],
 )
@@ -70,6 +72,7 @@ VEVData = pa.DataFrameSchema(
         pa.Check(
             lambda df: not df[["MC_Time", "Internal"]].duplicated().any(),
             description=_DESCRIPTIONS["Check_unique_indexing"],
+            name="Check_unique_indexing",
         ),
     ],
 )
