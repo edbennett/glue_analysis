@@ -123,7 +123,7 @@ def test_read_correlators_fortran_preserves_column_names(
     full_file: TextIO, filename: str, columns: list[str]
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert set(answer.correlators.columns) == set(columns + ["channel"])
+    assert set(answer.correlators.columns) == {*columns, "channel"}
 
 
 def test_read_correlators_fortran_preserves_data(
