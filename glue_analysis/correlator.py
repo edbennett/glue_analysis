@@ -107,10 +107,11 @@ def cross_validate(
             == sorted(vevs[["MC_Time", "Internal"]].to_numpy().tolist())
         )
     ).all():
-        raise DataInconsistencyError(
+        message = (
             "VEVs and correlators have differing MC_Time and Internal axes. "
             "Are they coming from the same ensemble?"
         )
+        raise DataInconsistencyError(message)
 
 
 class CorrelatorEnsemble:
@@ -131,16 +132,18 @@ class CorrelatorEnsemble:
 
     def freeze(self: Self) -> Self:
         if not isinstance(self._correlators, pd.DataFrame):
-            raise TypeError(
+            message = (
                 "Correlator data is expected to be pandas.Dataframe "
-                f"but {type(self._correlators)} was found."
+                f"but {type(self._correlators)} was found.",
             )
+            raise TypeError(message)
 
         if hasattr(self, "_vevs") and not isinstance(self._vevs, pd.DataFrame):
-            raise TypeError(
+            message = (
                 "VEV data is expected to be pandas.Dataframe "
-                f"but {type(self._vevs)} was found."
+                f"but {type(self._vevs)} was found.",
             )
+            raise TypeError(message)
 
         CorrelatorData.validate(self._correlators)
         if hasattr(self, "_vevs"):
@@ -158,26 +161,29 @@ class CorrelatorEnsemble:
         if not self.frozen:
             self._correlators = value
         else:
-            raise FrozenError(
+            message = (
                 "This instance is frozen. "
-                "You are not allowed to modify correlators anymore."
+                "You are not allowed to modify correlators anymore.",
             )
+            raise FrozenError(message)
 
     @property
     def vevs(self: Self) -> DataFrameType[CorrelatorData]:
         if hasattr(self, "_vevs"):
             return self._vevs
-        raise AttributeError("Vevs is not set for this instance.")
+        message = "Vevs is not set for this instance."
+        raise AttributeError(message)
 
     @vevs.setter
     def vevs(self: Self, value: Any) -> None:  # noqa: ANN401
         if not self.frozen:
             self._vevs = value
         else:
-            raise FrozenError(
+            message = (
                 "This instance is frozen. "
-                "You are not allowed to modify vevs anymore."
+                "You are not allowed to modify vevs anymore.",
             )
+            raise FrozenError(message)
 
     @property
     def frozen(self: Self) -> bool:
@@ -211,7 +217,8 @@ class CorrelatorEnsemble:
 
     def get_pyerrors(self: Self, *, subtract: bool = False) -> pe.Corr:
         if subtract and not hasattr(self, "_vevs"):
-            raise ValueError("Can't subtract vevs that have not been read.")
+            message = "Can't subtract vevs that have not been read."
+            raise ValueError(message)
 
         return pe.Corr(
             to_obs_array(self.get_numpy(), self.ensemble_name)

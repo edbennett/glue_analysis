@@ -134,10 +134,11 @@ def _assemble_metadata(
                 key: {"metadata": metadata[key], "header": final_metadata[key]}
                 for key in conflicting_keys
             }
-            raise ParsingError(
+            message = (
                 "Metadata contains the following entries which differ from"
                 f"the header: {conflicts}."
             )
+            raise ParsingError(message)
         final_metadata |= metadata
     return final_metadata
 
