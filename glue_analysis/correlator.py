@@ -6,11 +6,50 @@ from typing import Any, Self
 
 import numpy as np
 import pandas as pd
+import pandera as pa
 import pyerrors as pe
+from pandera.typing import DataFrame as DataFrameType
 
-# for type hints, not really enforced as of now:
-CorrelatorData = pd.DataFrame
-VEVData = pd.DataFrame
+_DESCRIPTIONS = {
+    #
+    "MC_Time": "Index enumerating the Monte Carlo samples.",
+    #
+    "Time": "Physical euclidean time coordinate "
+    "along which correlation is measured.",
+    #
+    "Internal": "Any further internal structure, e.g.,"
+    "an index enumerating interpolating operators, "
+    "a blocking or smearing level, "
+    "or any combination thereof.",
+    #
+    "Correlation": "Measured values of the correlators.",
+    #
+    "Vac_exp": "Measured values of the vacuum expectation values (VEVs).",
+}
+CorrelatorData = pa.DataFrameSchema(
+    {
+        "MC_Time": pa.Column(int, required=True, description=_DESCRIPTIONS["MC_Time"]),
+        "Time": pa.Column(int, required=True, description=_DESCRIPTIONS["Time"]),
+        "Internal1": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
+        "Internal2": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
+        "Correlation": pa.Column(
+            float, required=True, description=_DESCRIPTIONS["Correlation"]
+        ),
+    }
+)
+VEVData = pa.DataFrameSchema(
+    {
+        "MC_Time": pa.Column(int, required=True, description=_DESCRIPTIONS["MC_Time"]),
+        "Internal": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
+        "Vac_exp": pa.Column(
+            float, required=True, description=_DESCRIPTIONS["Vac_exp"]
+        ),
+    }
+)
+
+
+class FrozenError(Exception):
+    pass
 
 
 def only_on_consistent_data(func: Callable) -> Callable:
@@ -29,8 +68,8 @@ class CorrelatorEnsemble:
     """
 
     filename: str
-    correlators: pd.DataFrame
-    vevs: pd.DataFrame
+    _correlators: DataFrameType[CorrelatorData]
+    _vevs: DataFrameType[VEVData]
     metadata: dict[str, Any]
     ensemble_name: str
     _frozen: bool = False
@@ -39,43 +78,95 @@ class CorrelatorEnsemble:
         self.filename = filename
         self.ensemble_name = ensemble_name if ensemble_name else "glue_bins"
 
+    def freeze(self: Self) -> Self:
+        if not isinstance(self._correlators, pd.DataFrame):
+            raise TypeError(
+                "Correlator data is expected to be pandas.Dataframe "
+                f"but {type(self._correlators)} was found."
+            )
+
+        if hasattr(self, "_vevs") and not isinstance(self._vevs, pd.DataFrame):
+            raise TypeError(
+                "VEV data is expected to be pandas.Dataframe "
+                f"but {type(self._vevs)} was found."
+            )
+
+        CorrelatorData.validate(self._correlators)
+        if hasattr(self, "_vevs"):
+            VEVData.validate(self._vevs)
+        self._frozen = True
+        return self
+
+    @property
+    def correlators(self: Self) -> DataFrameType[CorrelatorData]:
+        return self._correlators
+
+    @correlators.setter
+    def correlators(self: Self, value: Any) -> None:  # noqa: ANN401
+        if not self.frozen:
+            self._correlators = value
+        else:
+            raise FrozenError(
+                "This instance is frozen. "
+                "You are not allowed to modify correlators anymore."
+            )
+
+    @property
+    def vevs(self: Self) -> DataFrameType[CorrelatorData]:
+        if hasattr(self, "_vevs"):
+            return self._vevs
+        raise AttributeError("Vevs is not set for this instance.")
+
+    @vevs.setter
+    def vevs(self: Self, value: Any) -> None:  # noqa: ANN401
+        if not self.frozen:
+            self._vevs = value
+        else:
+            raise FrozenError(
+                "This instance is frozen. "
+                "You are not allowed to modify vevs anymore."
+            )
+
+    @property
+    def frozen(self: Self) -> bool:
+        return self._frozen
+
     @property
     def NT(self: Self) -> int:
-        return max(self.correlators.Time)
+        return max(self._correlators.Time)
 
     @property
-    def num_ops(self: Self) -> int:
-        return max(self.correlators.Op_index1)
+    def num_internal(self: Self) -> int:
+        return max(self._correlators.Internal1)
 
     @property
-    def num_bins(self: Self) -> int:
-        return max(self.correlators.Bin_index)
+    def num_samples(self: Self) -> int:
+        return max(self._correlators.MC_Time)
 
     @property
     def has_consistent_vevs(self: Self) -> bool:
-        if max(self.vevs.Op_index) != self.num_ops:
-            logging.warning("Wrong number of operators in vevs")
+        if max(self.vevs.Internal) != self.num_internal:
+            logging.warning("Wrong number of internal dof in vevs")
             return False
-        if len(set(self.vevs.Op_index)) != self.num_ops:
-            logging.warning("Missing operators in vevs")
+        if len(set(self.vevs.Internal)) != self.num_internal:
+            logging.warning("Missing internal dof in vevs")
 
-        if max(self.vevs.Bin_index) != self.num_bins:
-            logging.warning("Wrong number of bins in vevs")
+        if max(self.vevs.MC_Time) != self.num_samples:
+            logging.warning("Wrong number of samples in vevs")
             return False
-        if len(set(self.vevs.Bin_index)) != self.num_bins:
-            logging.warning("Missing bins in vevs")
+        if len(set(self.vevs.MC_Time)) != self.num_samples:
+            logging.warning("Missing samples in vevs")
             return False
 
-        for op_idx in range(1, self.num_ops + 1):
-            for bin_idx in range(1, self.num_bins + 1):
+        for internal in range(1, self.num_internal + 1):
+            for sample in range(1, self.num_samples + 1):
                 if (
                     sum(
-                        (self.vevs.Op_index == op_idx)
-                        & (self.vevs.Bin_index == bin_idx)
+                        (self.vevs.Internal == internal) & (self.vevs.MC_Time == sample)
                     )
                     != 1
                 ):
-                    logging.warning(f"Missing {op_idx=}, {bin_idx=} in vevs")
+                    logging.warning(f"Missing {internal=}, {sample=} in vevs")
                     return False
 
         return True
@@ -84,52 +175,52 @@ class CorrelatorEnsemble:
     def is_consistent(self: Self) -> bool:
         if not self._frozen:
             raise ValueError("Data must be frozen to check consistency.")
-        if max(self.correlators.Op_index2) != self.num_ops:
-            logging.warning("Inconsistent numbers of operators")
+        if max(self._correlators.Internal2) != self.num_internal:
+            logging.warning("Inconsistent numbers of internal")
             return False
-        if set(self.correlators.Op_index2) != set(self.correlators.Op_index1):
-            logging.warning("Inconsistent operator pairings")
+        if set(self._correlators.Internal2) != set(self._correlators.Internal1):
+            logging.warning("Inconsistent internal dof pairings")
             return False
-        if len(set(self.correlators.Op_index1)) != self.num_ops:
-            logging.warning("Op_index1 missing one or more operators")
+        if len(set(self._correlators.Internal1)) != self.num_internal:
+            logging.warning("Internal1 missing one or more internal")
             return False
-        if len(set(self.correlators.Op_index2)) != self.num_ops:
-            logging.warning("Op_index2 missing one or more operators")
+        if len(set(self._correlators.Internal2)) != self.num_internal:
+            logging.warning("Internal2 missing one or more internal")
             return False
 
-        if len(set(self.correlators.Time)) != self.NT:
+        if len(set(self._correlators.Time)) != self.NT:
             logging.warning("Missing time slices")
             return False
 
-        if len(set(self.correlators.Bin_index)) != self.num_bins:
-            logging.warning("Missing bins")
+        if len(set(self._correlators.MC_Time)) != self.num_samples:
+            logging.warning("Missing samples")
             return False
 
-        if len(self.correlators) != self.num_bins * self.NT * self.num_ops**2:
+        if len(self._correlators) != self.num_samples * self.NT * self.num_internal**2:
             logging.warning("Total length not consistent")
             return False
 
-        if hasattr(self, "vevs") and not self.has_consistent_vevs:
+        if hasattr(self, "_vevs") and not self.has_consistent_vevs:
             return False
 
         return True
 
     @only_on_consistent_data
     def get_numpy(self: Self) -> np.array:
-        sorted_correlators = self.correlators.sort_values(
-            by=["Bin_index", "Time", "Op_index1", "Op_index2"]
+        sorted_correlators = self._correlators.sort_values(
+            by=["MC_Time", "Time", "Internal1", "Internal2"]
         )
         return sorted_correlators.Correlation.values.reshape(
-            self.num_bins, self.NT, self.num_ops, self.num_ops
+            self.num_samples, self.NT, self.num_internal, self.num_internal
         )
 
     @only_on_consistent_data
     def get_numpy_vevs(self: Self) -> np.array:
-        sorted_vevs = self.vevs.sort_values(by=["Bin_index", "Op_index"])
-        return sorted_vevs.Vac_exp.values.reshape(self.num_bins, self.num_ops)
+        sorted_vevs = self._vevs.sort_values(by=["MC_Time", "Internal"])
+        return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_internal)
 
     def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
-        if subtract and not hasattr(self, "vevs"):
+        if subtract and not hasattr(self, "_vevs"):
             raise ValueError("Can't subtract vevs that have not been read.")
 
         return pe.Corr(

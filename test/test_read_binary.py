@@ -6,11 +6,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from glue_analysis.correlator import CorrelatorData, VEVData
 from glue_analysis.readers.read_binary import (
-    CORRELATOR_COLUMNS,
     CORRELATOR_INDEXING_COLUMNS,
     HEADER_NAMES,
-    VEV_COLUMNS,
     VEV_INDEXING_COLUMNS,
     ParsingError,
     _read_correlators_binary,
@@ -39,13 +38,39 @@ def columns_from_header(header: dict[str, int], vev: bool = False) -> pd.DataFra
             range(1, header["Nop"] + 1),  # Op_index2
             range(1, int(header["LT"] / 2 + 1) + 1),  # Time
         ]
-    return (
+    ungrouped_columns = (
         pd.MultiIndex.from_product(
             index_ranges,
             names=VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS,
         )
         .to_frame()
         .reset_index(drop=True)
+    )
+    if vev:
+        assignments = {
+            "Internal": list(
+                ungrouped_columns[["Internal", "Blocking_index"]].itertuples(
+                    index=False
+                )
+            )
+        }
+    else:
+        assignments = {
+            "Internal1": list(
+                ungrouped_columns[["Internal1", "Blocking_index1"]].itertuples(
+                    index=False
+                )
+            ),
+            "Internal2": list(
+                ungrouped_columns[["Internal2", "Blocking_index2"]].itertuples(
+                    index=False
+                )
+            ),
+        }
+    return ungrouped_columns.assign(**assignments).drop(
+        ["Blocking_index", "Blocking_index1", "Blocking_index2"],
+        errors="ignore",
+        axis="columns",
     )
 
 
@@ -173,8 +198,9 @@ def test_read_correlators_binary_has_correct_columns_in_vev(
     corr_file: BinaryIO, filename: str, vev_file: BinaryIO
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename, vev_file=vev_file)
-    print(answer.vevs.columns)
-    assert (answer.vevs.columns == VEV_COLUMNS).all()
+    assert set(answer.vevs.columns) == set(
+        VEVData.get_metadata()[None]["columns"].keys()
+    )
 
 
 def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_vev(
@@ -184,7 +210,7 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_
         corr_file, filename, vev_file=create_file(header, vev_data)
     )
     assert (
-        (answer.vevs[VEV_INDEXING_COLUMNS] == columns_from_header(header, vev=True))
+        (answer.vevs[["MC_Time", "Internal"]] == columns_from_header(header, vev=True))
         .all()
         .all()
     )
@@ -206,15 +232,18 @@ def test_read_correlators_binary_has_correct_columns(
     corr_file: BinaryIO, filename: str
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
-    assert (answer.correlators.columns == CORRELATOR_COLUMNS).all()
+    assert set(answer.correlators.columns) == set(
+        CorrelatorData.get_metadata()[None]["columns"].keys()
+    )
 
 
 def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
+    columns = ["MC_Time", "Time", "Internal1", "Internal2"]
     assert (
-        (answer.correlators[CORRELATOR_INDEXING_COLUMNS] == columns_from_header(header))
+        (answer.correlators[columns] == columns_from_header(header, vev=False)[columns])
         .all()
         .all()
     )
@@ -224,4 +253,4 @@ def test_read_correlators_binary_preserves_data(
     corr_file: BinaryIO, filename: str, data: np.array
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
-    assert (answer.correlators["glue_bins"] == data).all()
+    assert (answer.correlators["Correlation"] == data).all()

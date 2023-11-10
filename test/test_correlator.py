@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
+import pandera as pa
 import pyerrors as pe
 import pytest
+from pandera.typing import DataFrame as DataFrameType
 
 from glue_analysis.correlator import (
     CorrelatorData,
     CorrelatorEnsemble,
+    FrozenError,
     VEVData,
     to_obs_array,
 )
 
-LENGTH_BIN_INDEX = 5  # needs at least 5 or pe.Corr complains
+LENGTH_MC_TIME = 5  # needs at least 5 or pe.Corr complains
 LENGTH_TIME = 2
-LENGTH_OP_INDEX = 3
-CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_BIN_INDEX * LENGTH_OP_INDEX**2
-VEV_DATA_LENGTH = LENGTH_BIN_INDEX * LENGTH_OP_INDEX
+LENGTH_INTERNAL = 3
+CORRELATOR_DATA_LENGTH = LENGTH_TIME * LENGTH_MC_TIME * LENGTH_INTERNAL**2
+VEV_DATA_LENGTH = LENGTH_MC_TIME * LENGTH_INTERNAL
 MC_TIME_AXIS = 0
 
 
@@ -25,16 +30,16 @@ def corr_data() -> CorrelatorData:
     return (
         pd.MultiIndex.from_product(
             [
-                range(1, LENGTH_BIN_INDEX + 1),
+                range(1, LENGTH_MC_TIME + 1),
                 range(1, LENGTH_TIME + 1),
-                range(1, LENGTH_OP_INDEX + 1),
-                range(1, LENGTH_OP_INDEX + 1),
+                range(1, LENGTH_INTERNAL + 1),
+                range(1, LENGTH_INTERNAL + 1),
             ],
-            names=["Bin_index", "Time", "Op_index1", "Op_index2"],
+            names=["MC_Time", "Time", "Internal1", "Internal2"],
         )
         .to_frame()
         .reset_index(drop=True)
-        .assign(Correlation=range(CORRELATOR_DATA_LENGTH))
+        .assign(Correlation=np.arange(CORRELATOR_DATA_LENGTH, dtype=float))
     )
 
 
@@ -48,25 +53,38 @@ def vev_data() -> CorrelatorData:
     return (
         pd.MultiIndex.from_product(
             [
-                range(1, LENGTH_BIN_INDEX + 1),
-                range(1, LENGTH_OP_INDEX + 1),
+                range(1, LENGTH_MC_TIME + 1),
+                range(1, LENGTH_INTERNAL + 1),
             ],
-            names=["Bin_index", "Op_index"],
+            names=["MC_Time", "Internal"],
         )
         .to_frame()
         .reset_index(drop=True)
-        .assign(Vac_exp=range(VEV_DATA_LENGTH))
+        .assign(Vac_exp=np.arange(VEV_DATA_LENGTH, dtype=float))
     )
 
 
 @pytest.fixture()
-def corr_ensemble(
+def frozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
+) -> CorrelatorEnsemble:
+    return create_corr_ensemble(filename, corr_data, vev_data, True)
+
+
+@pytest.fixture()
+def unfrozen_corr_ensemble(
+    filename: str, corr_data: CorrelatorData, vev_data: VEVData
+) -> CorrelatorEnsemble:
+    return create_corr_ensemble(filename, corr_data, vev_data, False)
+
+
+def create_corr_ensemble(
+    filename: str, corr_data: CorrelatorData, vev_data: VEVData, frozen: bool
 ) -> CorrelatorEnsemble:
     corr_ensemble = CorrelatorEnsemble(filename)
     corr_ensemble.correlators = corr_data
     corr_ensemble.vevs = vev_data
-    corr_ensemble._frozen = True
+    corr_ensemble._frozen = frozen
     return corr_ensemble
 
 
@@ -74,12 +92,11 @@ def test_correlator_ensemble_stores_filename() -> None:
     assert CorrelatorEnsemble("filename").filename == "filename"
 
 
-@pytest.mark.xfail(reason="To be implemented later", strict=True)
 def test_correlator_ensemble_allows_to_set_correlators_as_garbage() -> None:
-    with pytest.raises(ValueError):
-        CorrelatorEnsemble(
-            "filename"
-        ).correlators = "garbage that will be forbidden later"
+    # we decided to allow this because validation will be implemented in the
+    # freeze method
+    CorrelatorEnsemble("filename").correlators = "garbage that will be forbidden later"
+    # reaching this point means it didn't raise
 
 
 def test_correlator_ensemble_allows_to_set_correlators_with_correct_data(
@@ -89,10 +106,11 @@ def test_correlator_ensemble_allows_to_set_correlators_with_correct_data(
     # reaching this point means it didn't raise
 
 
-@pytest.mark.xfail(reason="To be implemented later", strict=True)
 def test_correlator_ensemble_allows_to_set_vevs_as_garbage() -> None:
-    with pytest.raises(ValueError):
-        CorrelatorEnsemble("filename").vevs = "garbage that will be forbidden later"
+    # we decided to allow this because validation will be implemented in the
+    # freeze method
+    CorrelatorEnsemble("filename").vevs = "garbage that will be forbidden later"
+    # reaching this point means it didn't raise
 
 
 def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
@@ -104,18 +122,24 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
 
 @pytest.mark.parametrize(
     "prop,value",
-    [("NT", LENGTH_TIME), ("num_ops", LENGTH_OP_INDEX), ("num_bins", LENGTH_BIN_INDEX)],
-    ids=["NT", "num_ops", "num_bins"],
+    [
+        ("NT", LENGTH_TIME),
+        ("num_internal", LENGTH_INTERNAL),
+        ("num_samples", LENGTH_MC_TIME),
+    ],
+    ids=["NT", "num_internal", "num_samples"],
 )
 def test_correlator_ensemble_reports_correct_properties(
-    corr_ensemble: CorrelatorEnsemble, prop: str, value: int
+    unfrozen_corr_ensemble: CorrelatorEnsemble, prop: str, value: int
 ) -> None:
-    assert getattr(corr_ensemble, prop) == value
+    assert getattr(unfrozen_corr_ensemble, prop) == value
     # The following violates One-assert-per-test rule but significantly
     # outweighs that on DRY.
     # Scramble as a second test:
-    corr_ensemble.correlators = corr_ensemble.correlators.sample(frac=1)
-    assert getattr(corr_ensemble, prop) == value
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.sample(
+        frac=1
+    )
+    assert getattr(unfrozen_corr_ensemble, prop) == value
 
 
 # We don't test the consistency checks at this point. They are extensive and
@@ -124,91 +148,95 @@ def test_correlator_ensemble_reports_correct_properties(
 
 
 def test_correlator_ensemble_returns_correctly_shaped_numpy(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    assert corr_ensemble.get_numpy().shape == (
-        LENGTH_BIN_INDEX,
+    assert frozen_corr_ensemble.get_numpy().shape == (
+        LENGTH_MC_TIME,
         LENGTH_TIME,
-        LENGTH_OP_INDEX,
-        LENGTH_OP_INDEX,
+        LENGTH_INTERNAL,
+        LENGTH_INTERNAL,
     )
 
 
 def test_correlator_ensemble_returns_correct_numpy_data(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert (
-        corr_ensemble.get_numpy().reshape(-1)
-        == corr_ensemble.correlators["Correlation"].values
+        frozen_corr_ensemble.get_numpy().reshape(-1)
+        == frozen_corr_ensemble.correlators["Correlation"].values
     ).all()
 
 
 def test_correlator_ensemble_returns_sorted_numpy_data(
-    corr_ensemble: CorrelatorEnsemble,
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    expected = corr_ensemble.correlators["Correlation"].values
-    corr_ensemble.correlators = corr_ensemble.correlators.sample(frac=1)
-    assert (corr_ensemble.get_numpy().reshape(-1) == expected).all()
+    expected = unfrozen_corr_ensemble.correlators["Correlation"].values
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.sample(
+        frac=1
+    )
+    assert (unfrozen_corr_ensemble.freeze().get_numpy().reshape(-1) == expected).all()
 
 
 def test_correlator_ensemble_returns_correctly_shaped_numpy_vevs(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    assert corr_ensemble.get_numpy_vevs().shape == (
-        LENGTH_BIN_INDEX,
-        LENGTH_OP_INDEX,
+    assert frozen_corr_ensemble.get_numpy_vevs().shape == (
+        LENGTH_MC_TIME,
+        LENGTH_INTERNAL,
     )
 
 
 def test_correlator_ensemble_returns_correct_numpy_data_for_vevs(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert (
-        corr_ensemble.get_numpy_vevs().reshape(-1)
-        == corr_ensemble.vevs["Vac_exp"].values
+        frozen_corr_ensemble.get_numpy_vevs().reshape(-1)
+        == frozen_corr_ensemble.vevs["Vac_exp"].values
     ).all()
 
 
 def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
-    corr_ensemble: CorrelatorEnsemble,
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    expected = corr_ensemble.vevs["Vac_exp"].values
-    corr_ensemble.vevs = corr_ensemble.vevs.sample(frac=1)
-    assert (corr_ensemble.get_numpy_vevs().reshape(-1) == expected).all()
+    expected = unfrozen_corr_ensemble.vevs["Vac_exp"].values
+    unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.sample(frac=1)
+    assert (
+        unfrozen_corr_ensemble.freeze().get_numpy_vevs().reshape(-1) == expected
+    ).all()
 
 
 def test_correlator_ensemble_raises_for_subtract_without_vevs_present(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    del corr_ensemble.vevs
+    del frozen_corr_ensemble._vevs
     with pytest.raises(ValueError):
-        corr_ensemble.get_pyerrors(subtract=True)
+        frozen_corr_ensemble.get_pyerrors(subtract=True)
 
 
 def test_correlator_ensemble_returned_correlator_has_correct_averages(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    corr = corr_ensemble.get_pyerrors()
-    corr_np = corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
-    for i in range(LENGTH_OP_INDEX):
-        for j in range(LENGTH_OP_INDEX):
+    corr = frozen_corr_ensemble.get_pyerrors()
+    corr_np = frozen_corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
+    for i in range(LENGTH_INTERNAL):
+        for j in range(LENGTH_INTERNAL):
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (corr_np[:, i, j] == corr.item(i, j).plottable()[1]).all()
 
 
 def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    corr = corr_ensemble.get_pyerrors(subtract=True)
-    corr_np = corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
-    vevs_np = corr_ensemble.get_numpy_vevs().mean(axis=MC_TIME_AXIS)
-    for i in range(LENGTH_OP_INDEX):
-        for j in range(LENGTH_OP_INDEX):
+    corr = frozen_corr_ensemble.get_pyerrors(subtract=True)
+    corr_np = frozen_corr_ensemble.get_numpy().mean(axis=MC_TIME_AXIS)
+    vevs_np = frozen_corr_ensemble.get_numpy_vevs().mean(axis=MC_TIME_AXIS)
+    for i in range(LENGTH_INTERNAL):
+        for j in range(LENGTH_INTERNAL):
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (
-                corr_np[:, i, j] - vevs_np[i] * vevs_np[j] / corr_ensemble.NT**2
+                corr_np[:, i, j] - vevs_np[i] * vevs_np[j] / frozen_corr_ensemble.NT**2
                 == corr.item(i, j).plottable()[1]
             ).all()
 
@@ -219,16 +247,15 @@ def test_correlator_ensemble_has_configurable_ensemble_name(
     ensemble_name = "some-other-name"
     corr_ensemble = CorrelatorEnsemble(filename, ensemble_name=ensemble_name)
     corr_ensemble.correlators = corr_data
-    corr_ensemble._frozen = True
-    assert corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
+    assert corr_ensemble.freeze().get_pyerrors().item(0, 0).content[0][0].e_names == [
         ensemble_name
     ]
 
 
 def test_correlator_ensemble_defaults_to_glue_bins_as_ensemble_name(
-    corr_ensemble: CorrelatorEnsemble,
+    frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    assert corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
+    assert frozen_corr_ensemble.get_pyerrors().item(0, 0).content[0][0].e_names == [
         "glue_bins"
     ]
 
@@ -275,3 +302,108 @@ def test_to_obs_array_works_on_four_dimensional_arrays() -> None:
             ]
         )
     ).all()
+
+
+### freezing and validation
+
+
+def test_correlator_ensemble_is_frozen_after_freezing(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    assert unfrozen_corr_ensemble.freeze().frozen
+
+
+@pytest.mark.parametrize(
+    "bad_data",
+    ["garbage that is no reasonable data", 42, np.arange(10)],
+    ids=["str", "int", "np.array"],
+)
+def test_correlator_ensemble_does_not_allow_garbage_correlators_on_freezing(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+    bad_data: Any,  # noqa: ANN401
+) -> None:
+    unfrozen_corr_ensemble.correlators = bad_data
+    with pytest.raises(TypeError):
+        unfrozen_corr_ensemble.freeze()
+
+
+@pytest.mark.parametrize(
+    "bad_data",
+    ["garbage that is no reasonable data", 42, np.arange(10)],
+    ids=["str", "int", "np.array"],
+)
+def test_correlator_ensemble_does_not_allow_garbage_vevs_on_freezing(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+    bad_data: Any,  # noqa: ANN401
+) -> None:
+    unfrozen_corr_ensemble.vevs = bad_data
+    with pytest.raises(TypeError):
+        unfrozen_corr_ensemble.freeze()
+
+
+@pytest.mark.parametrize(
+    "column_name", CorrelatorData.get_metadata()[None]["columns"].keys()
+)
+def test_correlator_ensemble_freezing_fails_with_missing_column(
+    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+) -> None:
+    unfrozen_corr_ensemble.correlators.drop(column_name, axis="columns", inplace=True)
+    with pytest.raises(pa.errors.SchemaError):
+        unfrozen_corr_ensemble.freeze()
+
+
+@pytest.mark.parametrize("column_name", VEVData.get_metadata()[None]["columns"].keys())
+def test_correlator_ensemble_freezing_fails_with_missing_column_in_vevs(
+    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+) -> None:
+    unfrozen_corr_ensemble.vevs.drop(column_name, axis="columns", inplace=True)
+    with pytest.raises(pa.errors.SchemaError):
+        unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_does_not_allow_alteration_after_freezing(
+    frozen_corr_ensemble: CorrelatorEnsemble,
+    corr_data: DataFrameType[CorrelatorData],
+) -> None:
+    with pytest.raises(FrozenError):
+        frozen_corr_ensemble.correlators = corr_data
+
+
+def test_correlator_ensemble_does_not_allow_alteration_of_vevs_after_freezing(
+    frozen_corr_ensemble: CorrelatorEnsemble,
+    vev_data: DataFrameType[VEVData],
+) -> None:
+    with pytest.raises(FrozenError):
+        frozen_corr_ensemble.vevs = vev_data
+
+
+@pytest.mark.parametrize(
+    "column_name", CorrelatorData.get_metadata()[None]["columns"].keys()
+)
+def test_correlator_ensemble_freezing_fails_with_wrong_datatypes(
+    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+) -> None:
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.assign(
+        **{column_name: "str is surely the wrong dtype"}
+    )
+    if column_name.startswith("Internal"):
+        # anything is allowed for internal index
+        unfrozen_corr_ensemble.freeze()
+    else:
+        with pytest.raises(pa.errors.SchemaError):
+            unfrozen_corr_ensemble.freeze()
+
+
+@pytest.mark.parametrize("column_name", VEVData.get_metadata()[None]["columns"].keys())
+def test_correlator_ensemble_freezing_fails_with_wrong_datatypes_in_vevs(
+    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+) -> None:
+    unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.assign(
+        **{column_name: "str is surely the wrong dtype"}
+    )
+    if column_name.startswith("Internal"):
+        # anything is allowed for Internal index
+        unfrozen_corr_ensemble.freeze()
+    else:
+        with pytest.raises(pa.errors.SchemaError):
+            unfrozen_corr_ensemble.freeze()

@@ -3,27 +3,28 @@ from typing import Any, BinaryIO
 
 import numpy as np
 import pandas as pd
+from pandera.typing import DataFrame as DataFrameType
 
-from ..correlator import CorrelatorEnsemble
+from ..correlator import CorrelatorData, CorrelatorEnsemble, VEVData
 
 LENGTH_OF_CORRELATOR_INDEXING = {
-    "Bin_index": lambda header: header["Nbin"],
+    "MC_Time": lambda header: header["Nbin"],
     "Blocking_index": lambda header: header["Nbl"],
-    "Op_index": lambda header: header["Nop"],
+    "Internal": lambda header: header["Nop"],
     "Time": lambda header: int(header["LT"] / 2 + 1),
 }
 CORRELATOR_INDEXING_COLUMNS = [
-    "Bin_index",
-    "Blocking_index2",
-    "Op_index2",
+    "MC_Time",
     "Blocking_index1",
-    "Op_index1",
+    "Internal1",
+    "Blocking_index2",
+    "Internal2",
     "Time",
 ]
 NUMBERS = "0123456789"
-CORRELATOR_COLUMNS = CORRELATOR_INDEXING_COLUMNS + ["glue_bins"]
-VEV_INDEXING_COLUMNS = ["Bin_index", "Blocking_index", "Op_index"]
-VEV_COLUMNS = VEV_INDEXING_COLUMNS + ["Vac_exp"]
+CORRELATOR_VALUE_COLUMN_NAME = "Correlation"
+VEV_VALUE_COLUMN_NAME = "Vac_exp"
+VEV_INDEXING_COLUMNS = ["MC_Time", "Blocking_index", "Internal"]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
 HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
@@ -38,7 +39,7 @@ def read_correlators_binary(
     channel: str = "",
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
-) -> CorrelatorEnsemble:
+) -> CorrelatorEnsemble:  # pragma: no cover
     with open(corr_filename, "rb") as corr_file:
         if vev_filename:
             with open(vev_filename, "rb") as vev_file:
@@ -60,17 +61,41 @@ def _read_correlators_binary(
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
-    correlators.correlators = _read(corr_file, correlators.metadata, vev=False)
+    correlators.correlators = _make_compliant_correlator_data(
+        _read(corr_file, correlators.metadata, vev=False)
+    )
     if vev_file:
-        correlators.vevs = _read(vev_file, correlators.metadata, vev=True)
-    correlators._frozen = True
-    return correlators
+        correlators.vevs = _make_compliant_vevs_data(
+            _read(vev_file, correlators.metadata, vev=True)
+        )
+    return correlators.freeze()
+
+
+def _make_compliant_vevs_data(
+    vevs: pd.DataFrame,
+) -> DataFrameType[VEVData]:
+    return vevs.assign(
+        Internal=list(vevs[["Internal", "Blocking_index"]].itertuples(index=False))
+    ).drop("Blocking_index", axis="columns")
+
+
+def _make_compliant_correlator_data(
+    correlators: pd.DataFrame,
+) -> DataFrameType[CorrelatorData]:
+    return correlators.assign(
+        Internal1=list(
+            correlators[["Internal1", "Blocking_index1"]].itertuples(index=False)
+        ),
+        Internal2=list(
+            correlators[["Internal2", "Blocking_index2"]].itertuples(index=False)
+        ),
+    ).drop(["Blocking_index1", "Blocking_index2"], axis="columns")
 
 
 def _read(file: BinaryIO, header: dict[str, int], vev: bool) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
     correlators = _columns_from_header(header, vev)
-    correlators[VEV_COLUMNS[-1] if vev else CORRELATOR_COLUMNS[-1]] = (
+    correlators[VEV_VALUE_COLUMN_NAME if vev else CORRELATOR_VALUE_COLUMN_NAME] = (
         # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
         np.frombuffer(file.read(), dtype=np.float64)
     )
