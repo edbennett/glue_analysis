@@ -338,21 +338,28 @@ def test_correlator_ensemble_does_not_allow_garbage_vevs_on_freezing(
 
 
 @pytest.mark.parametrize(
-    "column_name", CorrelatorData.get_metadata()[None]["columns"].keys()
+    "column_name",
+    CorrelatorData.get_metadata()[None]["columns"].keys(),
 )
 def test_correlator_ensemble_freezing_fails_with_missing_column(
-    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+    column_name: str,
 ) -> None:
-    unfrozen_corr_ensemble.correlators.drop(column_name, axis="columns", inplace=True)
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.drop(
+        column_name, axis="columns"
+    )
     with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
 
 
 @pytest.mark.parametrize("column_name", VEVData.get_metadata()[None]["columns"].keys())
 def test_correlator_ensemble_freezing_fails_with_missing_column_in_vevs(
-    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+    column_name: str,
 ) -> None:
-    unfrozen_corr_ensemble.vevs.drop(column_name, axis="columns", inplace=True)
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.vevs.drop(
+        column_name, axis="columns"
+    )
     with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
 
