@@ -209,7 +209,7 @@ class CorrelatorEnsemble:
             self.num_samples, self.num_internal
         )
 
-    def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
+    def get_pyerrors(self: Self, *, subtract: bool = False) -> pe.Corr:
         if subtract and not hasattr(self, "_vevs"):
             raise ValueError("Can't subtract vevs that have not been read.")
 

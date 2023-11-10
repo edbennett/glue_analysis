@@ -69,18 +69,18 @@ def vev_data() -> CorrelatorData:
 def frozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
-    return create_corr_ensemble(filename, corr_data, vev_data, True)
+    return create_corr_ensemble(filename, corr_data, vev_data, frozen=True)
 
 
 @pytest.fixture()
 def unfrozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
-    return create_corr_ensemble(filename, corr_data, vev_data, False)
+    return create_corr_ensemble(filename, corr_data, vev_data, frozen=False)
 
 
 def create_corr_ensemble(
-    filename: str, corr_data: CorrelatorData, vev_data: VEVData, frozen: bool
+    filename: str, corr_data: CorrelatorData, vev_data: VEVData, *, frozen: bool
 ) -> CorrelatorEnsemble:
     corr_ensemble = CorrelatorEnsemble(filename)
     corr_ensemble.correlators = corr_data
