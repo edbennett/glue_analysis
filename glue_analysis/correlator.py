@@ -82,6 +82,10 @@ class FrozenError(Exception):
     pass
 
 
+class DataInconsistencyError(Exception):
+    pass
+
+
 def only_on_consistent_data(func: Callable) -> Callable:
     # Completely generic function, ignore typing here
     def func_with_check(self, *args, **kwargs):  # noqa: ANN202,ANN001,ANN002,ANN003
@@ -90,6 +94,18 @@ def only_on_consistent_data(func: Callable) -> Callable:
         return func(self, *args, **kwargs)
 
     return func_with_check
+
+
+def cross_validate(
+    corr: DataFrameType[CorrelatorData], vevs: DataFrameType[VEVData]
+) -> None:
+    if not (
+        corr.groupby(by=["Time", "Internal2"]).apply(
+            lambda df: sorted(df[["MC_Time", "Internal1"]].values.tolist())
+            == sorted(vevs[["MC_Time", "Internal"]].values.tolist())
+        )
+    ).all():
+        raise DataInconsistencyError
 
 
 class CorrelatorEnsemble:
@@ -124,6 +140,7 @@ class CorrelatorEnsemble:
         CorrelatorData.validate(self._correlators)
         if hasattr(self, "_vevs"):
             VEVData.validate(self._vevs)
+            cross_validate(self._correlators, self._vevs)
         self._frozen = True
         return self
 

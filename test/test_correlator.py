@@ -12,6 +12,7 @@ from pandera.typing import DataFrame as DataFrameType
 from glue_analysis.correlator import (
     CorrelatorData,
     CorrelatorEnsemble,
+    DataInconsistencyError,
     FrozenError,
     VEVData,
     to_obs_array,
@@ -436,4 +437,15 @@ def test_correlator_ensemble_fails_if_indexing_rows_are_not_unique_vevs(
     vevs = unfrozen_corr_ensemble.vevs
     vevs.loc[0] = vevs.loc[1]
     with pytest.raises(pa.errors.SchemaError):
+        unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_fails_if_vevs_and_correlators_with_different_index(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.vevs["MC_Time"] = -1  # different from correlators
+    unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.drop_duplicates(
+        subset=["MC_Time", "Internal"], keep="first"
+    )
+    with pytest.raises(DataInconsistencyError):
         unfrozen_corr_ensemble.freeze()
