@@ -88,12 +88,17 @@ def cross_validate(
     corr: DataFrameType[CorrelatorData], vevs: DataFrameType[VEVData]
 ) -> None:
     if not (
+        # It's sufficient to check this one way round (and not with Internal1/2
+        # interchanged) because their consistency is assured from other checks.
         corr.groupby(by=["Time", "Internal2"]).apply(
             lambda df: sorted(df[["MC_Time", "Internal1"]].values.tolist())
             == sorted(vevs[["MC_Time", "Internal"]].values.tolist())
         )
     ).all():
-        raise DataInconsistencyError
+        raise DataInconsistencyError(
+            "VEVs and correlators have differing MC_Time and Internal axes. "
+            "Are they coming from the same ensemble?"
+        )
 
 
 class CorrelatorEnsemble:
