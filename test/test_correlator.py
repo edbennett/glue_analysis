@@ -143,11 +143,6 @@ def test_correlator_ensemble_reports_correct_properties(
     assert getattr(unfrozen_corr_ensemble, prop) == value
 
 
-# We don't test the consistency checks at this point. They are extensive and
-# rely on all those implicit conventions about the data structure we're about to
-# change. Come back and test them when they are meaningful again.
-
-
 def test_correlator_ensemble_returns_correctly_shaped_numpy(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
