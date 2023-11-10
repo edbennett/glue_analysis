@@ -62,11 +62,19 @@ def _read_correlators_binary(
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
     correlators.correlators = _make_compliant_correlator_data(
-        _read(corr_file, correlators.metadata, vev=False)
+        _read(
+            corr_file,
+            _columns_from_header(correlators.metadata, CORRELATOR_INDEXING_COLUMNS),
+            CORRELATOR_VALUE_COLUMN_NAME,
+        )
     )
     if vev_file:
         correlators.vevs = _make_compliant_vevs_data(
-            _read(vev_file, correlators.metadata, vev=True)
+            _read(
+                vev_file,
+                _columns_from_header(correlators.metadata, VEV_INDEXING_COLUMNS),
+                VEV_VALUE_COLUMN_NAME,
+            )
         )
     return correlators.freeze()
 
@@ -92,10 +100,15 @@ def _make_compliant_correlator_data(
     ).drop(["Blocking_index1", "Blocking_index2"], axis="columns")
 
 
-def _read(file: BinaryIO, header: dict[str, int], vev: bool) -> pd.DataFrame:
+def _read(
+    file: BinaryIO,
+    # could be more precise, i.e., only indexing portion of
+    # DataFrameType[CorrelatorData | VEVData]:
+    correlators: pd.DataFrame,
+    value_column_name: str,
+) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
-    correlators = _columns_from_header(header, vev)
-    correlators[VEV_VALUE_COLUMN_NAME if vev else CORRELATOR_VALUE_COLUMN_NAME] = (
+    correlators[value_column_name] = (
         # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
         np.frombuffer(file.read(), dtype=np.float64)
     )
@@ -143,8 +156,7 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
     return header
 
 
-def _columns_from_header(header: dict[str, int], vev: bool) -> pd.DataFrame:
-    columns = VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS
+def _columns_from_header(header: dict[str, int], columns: list[str]) -> pd.DataFrame:
     return (
         pd.MultiIndex.from_product(
             [
