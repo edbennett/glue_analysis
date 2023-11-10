@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 import itertools
-from collections.abc import Iterable
 from io import StringIO
-from typing import TextIO, TypeVar
+from typing import TextIO
 
 import numpy as np
 import pytest
@@ -71,34 +70,6 @@ def vev_file(vev_columns: list[str]) -> StringIO:
     return create_full_file(vev_columns, data)
 
 
-SomeType = TypeVar("SomeType")
-
-
-def any_element_of(iterable: Iterable[SomeType]) -> SomeType:
-    return next(iter(iterable))
-
-
-def create_consistent_vev_data_from(
-    corr_file: TextIO, vev_columns: list[str]
-) -> StringIO:
-    original_position = corr_file.tell()
-    # Ensures that MC_Time and Internal columns match with corr_file
-    vev_data = np.asarray(
-        any_element_of(
-            # This was written for a relatively late test, so other tests are already in
-            # place to ensure that this works correctly:
-            _read_correlators_fortran(corr_file, "doesn't matter")
-            .correlators.drop("channel", axis="columns")
-            .groupby(["Time", "Internal1"])
-        )[1]
-        .drop(["Time", "Internal1"], axis="columns")
-        .values,
-        dtype=int,
-    )
-    corr_file.seek(original_position)
-    return vev_data
-
-
 ### Trivial behavior
 
 
@@ -163,9 +134,7 @@ def test_read_correlators_fortran_preserves_data(
 
 
 def test_read_correlators_fortran_preserves_data_in_vev(
-    full_file: TextIO, filename: str, vev_columns: list[str]
+    full_file: TextIO, filename: str, vev_data: np.array, vev_file: TextIO
 ) -> None:
-    vev_data = create_consistent_vev_data_from(full_file, vev_columns)
-    vev_file = create_full_file(vev_columns, vev_data)
     answer = _read_correlators_fortran(full_file, filename, vev_file=vev_file)
     assert (answer.vevs.drop("channel", axis="columns").values == vev_data).all()
