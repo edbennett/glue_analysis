@@ -205,7 +205,7 @@ def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
 def test_correlator_ensemble_raises_for_subtract_without_vevs_present(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    del frozen_corr_ensemble._vevs
+    del frozen_corr_ensemble._vevs  # noqa: SLF001
     with pytest.raises(
         ValueError, match="Can't subtract vevs that have not been read."
     ):
