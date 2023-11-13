@@ -8,7 +8,7 @@ import pandera as pa
 import pyerrors as pe
 from pandera.typing import DataFrame as DataFrameType
 
-_DESCRIPTIONS = {
+_COLUMN_DESCRIPTIONS = {
     #
     "MC_Time": "Index enumerating the Monte Carlo samples.",
     #
@@ -23,6 +23,8 @@ _DESCRIPTIONS = {
     "Correlation": "Measured values of the correlators.",
     #
     "Vac_exp": "Measured values of the vacuum expectation values (VEVs).",
+}
+_CHECK_DESCRIPTIONS = {
     #
     "Check_Internals_equal": "Internal1 and Internal2 are supposed to form"
     "square matrix, so they must be identical up to reordering.",
@@ -32,12 +34,18 @@ _DESCRIPTIONS = {
 }
 CorrelatorData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(int, required=True, description=_DESCRIPTIONS["MC_Time"]),
-        "Time": pa.Column(int, required=True, description=_DESCRIPTIONS["Time"]),
-        "Internal1": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
-        "Internal2": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
+        "MC_Time": pa.Column(
+            int, required=True, description=_COLUMN_DESCRIPTIONS["MC_Time"]
+        ),
+        "Time": pa.Column(int, required=True, description=_COLUMN_DESCRIPTIONS["Time"]),
+        "Internal1": pa.Column(
+            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
+        ),
+        "Internal2": pa.Column(
+            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
+        ),
         "Correlation": pa.Column(
-            float, required=True, description=_DESCRIPTIONS["Correlation"]
+            float, required=True, description=_COLUMN_DESCRIPTIONS["Correlation"]
         ),
     },
     checks=[
@@ -46,30 +54,34 @@ CorrelatorData = pa.DataFrameSchema(
                 df["Internal1"].sort_values().values
                 == df["Internal2"].sort_values().values
             ).all(),
-            description=_DESCRIPTIONS["Check_Internals_equal"],
+            description=_CHECK_DESCRIPTIONS["Check_Internals_equal"],
             name="Check_Internals_equal",
         ),
         pa.Check(
             lambda df: not df[["MC_Time", "Time", "Internal1", "Internal2"]]
             .duplicated()
             .any(),
-            description=_DESCRIPTIONS["Check_unique_indexing"],
+            description=_CHECK_DESCRIPTIONS["Check_unique_indexing"],
             name="Check_unique_indexing",
         ),
     ],
 )
 VEVData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(int, required=True, description=_DESCRIPTIONS["MC_Time"]),
-        "Internal": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
+        "MC_Time": pa.Column(
+            int, required=True, description=_COLUMN_DESCRIPTIONS["MC_Time"]
+        ),
+        "Internal": pa.Column(
+            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
+        ),
         "Vac_exp": pa.Column(
-            float, required=True, description=_DESCRIPTIONS["Vac_exp"]
+            float, required=True, description=_COLUMN_DESCRIPTIONS["Vac_exp"]
         ),
     },
     checks=[
         pa.Check(
             lambda df: not df[["MC_Time", "Internal"]].duplicated().any(),
-            description=_DESCRIPTIONS["Check_unique_indexing"],
+            description=_CHECK_DESCRIPTIONS["Check_unique_indexing"],
             name="Check_unique_indexing",
         ),
     ],
