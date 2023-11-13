@@ -12,6 +12,7 @@ from pandera.typing import DataFrame as DataFrameType
 from glue_analysis.correlator import (
     CorrelatorData,
     CorrelatorEnsemble,
+    DataInconsistencyError,
     FrozenError,
     VEVData,
     to_obs_array,
@@ -140,11 +141,6 @@ def test_correlator_ensemble_reports_correct_properties(
         frac=1
     )
     assert getattr(unfrozen_corr_ensemble, prop) == value
-
-
-# We don't test the consistency checks at this point. They are extensive and
-# rely on all those implicit conventions about the data structure we're about to
-# change. Come back and test them when they are meaningful again.
 
 
 def test_correlator_ensemble_returns_correctly_shaped_numpy(
@@ -378,32 +374,73 @@ def test_correlator_ensemble_does_not_allow_alteration_of_vevs_after_freezing(
 
 
 @pytest.mark.parametrize(
-    "column_name", CorrelatorData.get_metadata()[None]["columns"].keys()
+    "column_name",
+    filter(
+        lambda s: not s.startswith("Internal"),  # anything is allowed for Internal
+        CorrelatorData.get_metadata()[None]["columns"].keys(),
+    ),
 )
 def test_correlator_ensemble_freezing_fails_with_wrong_datatypes(
     unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
 ) -> None:
-    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.assign(
-        **{column_name: "str is surely the wrong dtype"}
+    unfrozen_corr_ensemble.correlators[column_name] = "str is surely the wrong dtype"
+    # make sure to not trigger other checks
+    unfrozen_corr_ensemble.correlators = (
+        unfrozen_corr_ensemble.correlators.drop_duplicates(
+            subset=["MC_Time", "Time", "Internal1", "Internal2"], keep="first"
+        )
     )
-    if column_name.startswith("Internal"):
-        # anything is allowed for internal index
+    with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
-    else:
-        with pytest.raises(pa.errors.SchemaError):
-            unfrozen_corr_ensemble.freeze()
 
 
-@pytest.mark.parametrize("column_name", VEVData.get_metadata()[None]["columns"].keys())
 def test_correlator_ensemble_freezing_fails_with_wrong_datatypes_in_vevs(
-    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.assign(
-        **{column_name: "str is surely the wrong dtype"}
+    unfrozen_corr_ensemble.vevs["MC_Time"] = "str is surely the wrong dtype"
+    # make sure to not trigger other checks
+    unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.drop_duplicates(
+        subset=["MC_Time", "Internal"], keep="first"
     )
-    if column_name.startswith("Internal"):
-        # anything is allowed for Internal index
+    with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
-    else:
-        with pytest.raises(pa.errors.SchemaError):
-            unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_freezing_fails_if_internals_differ_in_content(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    # different from Internal1
+    unfrozen_corr_ensemble.correlators.loc[0, "Internal2"] = 2
+    with pytest.raises(pa.errors.SchemaError):
+        unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_fails_if_indexing_rows_are_not_unique(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    corr = unfrozen_corr_ensemble.correlators
+    # Carefully chosen: Internal1 must be indentical to Internal2 otherwise
+    # another check is triggered, too.
+    corr.loc[0] = corr.loc[4]
+    with pytest.raises(pa.errors.SchemaError):
+        unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_fails_if_indexing_rows_are_not_unique_vevs(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    vevs = unfrozen_corr_ensemble.vevs
+    vevs.loc[0] = vevs.loc[1]
+    with pytest.raises(pa.errors.SchemaError):
+        unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_fails_if_vevs_and_correlators_with_different_index(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.vevs["MC_Time"] = -1  # different from correlators
+    unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.drop_duplicates(
+        subset=["MC_Time", "Internal"], keep="first"
+    )
+    with pytest.raises(DataInconsistencyError):
+        unfrozen_corr_ensemble.freeze()

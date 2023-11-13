@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import itertools
 from io import StringIO
 from typing import TextIO
 
@@ -30,8 +31,12 @@ def vev_columns() -> list[str]:
 
 
 def create_data(columns: list[str]) -> np.array:
-    np.random.seed(42)
-    return np.random.randint(0, 10, (10, len(columns)))
+    indexing_data = np.array(
+        [x for x in itertools.product(*[range(5) for col in columns[:-1]])]
+    )
+    return np.concatenate(
+        [indexing_data, np.arange(indexing_data.shape[0]).reshape(-1, 1)], axis=1
+    )
 
 
 @pytest.fixture()
@@ -132,15 +137,4 @@ def test_read_correlators_fortran_preserves_data_in_vev(
     full_file: TextIO, filename: str, vev_data: np.array, vev_file: TextIO
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename, vev_file=vev_file)
-    assert (answer.vevs.drop("channel", axis=1).values == vev_data).all()
-
-
-# documenting current behavior, might want to be revisited
-def test_read_correlators_fortran_does_not_check_consistency_of_given_data(
-    full_file: TextIO, filename: str, data: list[str], vev_file: TextIO
-) -> None:
-    vev_file.readlines(400)
-    vev_file.truncate()
-    vev_file.seek(0)  # now shape is different
-    _read_correlators_fortran(full_file, filename, vev_file=vev_file)
-    # if we reach this point, it hasn't complained and test has passed
+    assert (answer.vevs.drop("channel", axis="columns").values == vev_data).all()

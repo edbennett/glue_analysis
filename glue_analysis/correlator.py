@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import logging
-from collections.abc import Callable
 from typing import Any, Self
 
 import numpy as np
@@ -10,7 +8,7 @@ import pandera as pa
 import pyerrors as pe
 from pandera.typing import DataFrame as DataFrameType
 
-_DESCRIPTIONS = {
+_COLUMN_DESCRIPTIONS = {
     #
     "MC_Time": "Index enumerating the Monte Carlo samples.",
     #
@@ -26,25 +24,67 @@ _DESCRIPTIONS = {
     #
     "Vac_exp": "Measured values of the vacuum expectation values (VEVs).",
 }
+_CHECK_DESCRIPTIONS = {
+    #
+    "Check_Internals_equal": "Internal1 and Internal2 are supposed to form"
+    "square matrix, so they must be identical up to reordering.",
+    #
+    "Check_unique_indexing": "The index columns are supposed "
+    "to make for a unique index.",
+}
 CorrelatorData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(int, required=True, description=_DESCRIPTIONS["MC_Time"]),
-        "Time": pa.Column(int, required=True, description=_DESCRIPTIONS["Time"]),
-        "Internal1": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
-        "Internal2": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
-        "Correlation": pa.Column(
-            float, required=True, description=_DESCRIPTIONS["Correlation"]
+        "MC_Time": pa.Column(
+            int, required=True, description=_COLUMN_DESCRIPTIONS["MC_Time"]
         ),
-    }
+        "Time": pa.Column(int, required=True, description=_COLUMN_DESCRIPTIONS["Time"]),
+        "Internal1": pa.Column(
+            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
+        ),
+        "Internal2": pa.Column(
+            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
+        ),
+        "Correlation": pa.Column(
+            float, required=True, description=_COLUMN_DESCRIPTIONS["Correlation"]
+        ),
+    },
+    checks=[
+        pa.Check(
+            lambda df: (
+                df["Internal1"].sort_values().values
+                == df["Internal2"].sort_values().values
+            ).all(),
+            description=_CHECK_DESCRIPTIONS["Check_Internals_equal"],
+            name="Check_Internals_equal",
+        ),
+        pa.Check(
+            lambda df: not df[["MC_Time", "Time", "Internal1", "Internal2"]]
+            .duplicated()
+            .any(),
+            description=_CHECK_DESCRIPTIONS["Check_unique_indexing"],
+            name="Check_unique_indexing",
+        ),
+    ],
 )
 VEVData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(int, required=True, description=_DESCRIPTIONS["MC_Time"]),
-        "Internal": pa.Column(required=True, description=_DESCRIPTIONS["Internal"]),
-        "Vac_exp": pa.Column(
-            float, required=True, description=_DESCRIPTIONS["Vac_exp"]
+        "MC_Time": pa.Column(
+            int, required=True, description=_COLUMN_DESCRIPTIONS["MC_Time"]
         ),
-    }
+        "Internal": pa.Column(
+            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
+        ),
+        "Vac_exp": pa.Column(
+            float, required=True, description=_COLUMN_DESCRIPTIONS["Vac_exp"]
+        ),
+    },
+    checks=[
+        pa.Check(
+            lambda df: not df[["MC_Time", "Internal"]].duplicated().any(),
+            description=_CHECK_DESCRIPTIONS["Check_unique_indexing"],
+            name="Check_unique_indexing",
+        ),
+    ],
 )
 
 
@@ -52,14 +92,25 @@ class FrozenError(Exception):
     pass
 
 
-def only_on_consistent_data(func: Callable) -> Callable:
-    # Completely generic function, ignore typing here
-    def func_with_check(self, *args, **kwargs):  # noqa: ANN202,ANN001,ANN002,ANN003
-        if not self.is_consistent:
-            raise ValueError("Data are inconsistent.")
-        return func(self, *args, **kwargs)
+class DataInconsistencyError(Exception):
+    pass
 
-    return func_with_check
+
+def cross_validate(
+    corr: DataFrameType[CorrelatorData], vevs: DataFrameType[VEVData]
+) -> None:
+    if not (
+        # It's sufficient to check this one way round (and not with Internal1/2
+        # interchanged) because their consistency is assured from other checks.
+        corr.groupby(by=["Time", "Internal2"]).apply(
+            lambda df: sorted(df[["MC_Time", "Internal1"]].values.tolist())
+            == sorted(vevs[["MC_Time", "Internal"]].values.tolist())
+        )
+    ).all():
+        raise DataInconsistencyError(
+            "VEVs and correlators have differing MC_Time and Internal axes. "
+            "Are they coming from the same ensemble?"
+        )
 
 
 class CorrelatorEnsemble:
@@ -94,6 +145,7 @@ class CorrelatorEnsemble:
         CorrelatorData.validate(self._correlators)
         if hasattr(self, "_vevs"):
             VEVData.validate(self._vevs)
+            cross_validate(self._correlators, self._vevs)
         self._frozen = True
         return self
 
@@ -143,69 +195,6 @@ class CorrelatorEnsemble:
     def num_samples(self: Self) -> int:
         return max(self._correlators.MC_Time)
 
-    @property
-    def has_consistent_vevs(self: Self) -> bool:
-        if max(self.vevs.Internal) != self.num_internal:
-            logging.warning("Wrong number of internal dof in vevs")
-            return False
-        if len(set(self.vevs.Internal)) != self.num_internal:
-            logging.warning("Missing internal dof in vevs")
-
-        if max(self.vevs.MC_Time) != self.num_samples:
-            logging.warning("Wrong number of samples in vevs")
-            return False
-        if len(set(self.vevs.MC_Time)) != self.num_samples:
-            logging.warning("Missing samples in vevs")
-            return False
-
-        for internal in range(1, self.num_internal + 1):
-            for sample in range(1, self.num_samples + 1):
-                if (
-                    sum(
-                        (self.vevs.Internal == internal) & (self.vevs.MC_Time == sample)
-                    )
-                    != 1
-                ):
-                    logging.warning(f"Missing {internal=}, {sample=} in vevs")
-                    return False
-
-        return True
-
-    @property
-    def is_consistent(self: Self) -> bool:
-        if not self._frozen:
-            raise ValueError("Data must be frozen to check consistency.")
-        if max(self._correlators.Internal2) != self.num_internal:
-            logging.warning("Inconsistent numbers of internal")
-            return False
-        if set(self._correlators.Internal2) != set(self._correlators.Internal1):
-            logging.warning("Inconsistent internal dof pairings")
-            return False
-        if len(set(self._correlators.Internal1)) != self.num_internal:
-            logging.warning("Internal1 missing one or more internal")
-            return False
-        if len(set(self._correlators.Internal2)) != self.num_internal:
-            logging.warning("Internal2 missing one or more internal")
-            return False
-
-        if len(set(self._correlators.Time)) != self.NT:
-            logging.warning("Missing time slices")
-            return False
-
-        if len(set(self._correlators.MC_Time)) != self.num_samples:
-            logging.warning("Missing samples")
-            return False
-
-        if len(self._correlators) != self.num_samples * self.NT * self.num_internal**2:
-            logging.warning("Total length not consistent")
-            return False
-
-        if hasattr(self, "_vevs") and not self.has_consistent_vevs:
-            return False
-
-        return True
-
-    @only_on_consistent_data
     def get_numpy(self: Self) -> np.array:
         sorted_correlators = self._correlators.sort_values(
             by=["MC_Time", "Time", "Internal1", "Internal2"]
@@ -214,7 +203,6 @@ class CorrelatorEnsemble:
             self.num_samples, self.NT, self.num_internal, self.num_internal
         )
 
-    @only_on_consistent_data
     def get_numpy_vevs(self: Self) -> np.array:
         sorted_vevs = self._vevs.sort_values(by=["MC_Time", "Internal"])
         return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_internal)
