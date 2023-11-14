@@ -51,8 +51,8 @@ CorrelatorData = pa.DataFrameSchema(
     checks=[
         pa.Check(
             lambda df: (
-                df["Internal1"].sort_values().values
-                == df["Internal2"].sort_values().values
+                df["Internal1"].sort_values().to_numpy()
+                == df["Internal2"].sort_values().to_numpy()
             ).all(),
             description=_CHECK_DESCRIPTIONS["Check_Internals_equal"],
             name="Check_Internals_equal",
@@ -103,14 +103,15 @@ def cross_validate(
         # It's sufficient to check this one way round (and not with Internal1/2
         # interchanged) because their consistency is assured from other checks.
         corr.groupby(by=["Time", "Internal2"]).apply(
-            lambda df: sorted(df[["MC_Time", "Internal1"]].values.tolist())
-            == sorted(vevs[["MC_Time", "Internal"]].values.tolist())
+            lambda df: sorted(df[["MC_Time", "Internal1"]].to_numpy().tolist())
+            == sorted(vevs[["MC_Time", "Internal"]].to_numpy().tolist())
         )
     ).all():
-        raise DataInconsistencyError(
+        message = (
             "VEVs and correlators have differing MC_Time and Internal axes. "
             "Are they coming from the same ensemble?"
         )
+        raise DataInconsistencyError(message)
 
 
 class CorrelatorEnsemble:
@@ -131,16 +132,18 @@ class CorrelatorEnsemble:
 
     def freeze(self: Self) -> Self:
         if not isinstance(self._correlators, pd.DataFrame):
-            raise TypeError(
+            message = (
                 "Correlator data is expected to be pandas.Dataframe "
                 f"but {type(self._correlators)} was found."
             )
+            raise TypeError(message)
 
         if hasattr(self, "_vevs") and not isinstance(self._vevs, pd.DataFrame):
-            raise TypeError(
+            message = (
                 "VEV data is expected to be pandas.Dataframe "
                 f"but {type(self._vevs)} was found."
             )
+            raise TypeError(message)
 
         CorrelatorData.validate(self._correlators)
         if hasattr(self, "_vevs"):
@@ -158,26 +161,29 @@ class CorrelatorEnsemble:
         if not self.frozen:
             self._correlators = value
         else:
-            raise FrozenError(
+            message = (
                 "This instance is frozen. "
                 "You are not allowed to modify correlators anymore."
             )
+            raise FrozenError(message)
 
     @property
     def vevs(self: Self) -> DataFrameType[CorrelatorData]:
         if hasattr(self, "_vevs"):
             return self._vevs
-        raise AttributeError("Vevs is not set for this instance.")
+        message = "Vevs is not set for this instance."
+        raise AttributeError(message)
 
     @vevs.setter
     def vevs(self: Self, value: Any) -> None:  # noqa: ANN401
         if not self.frozen:
             self._vevs = value
         else:
-            raise FrozenError(
+            message = (
                 "This instance is frozen. "
                 "You are not allowed to modify vevs anymore."
             )
+            raise FrozenError(message)
 
     @property
     def frozen(self: Self) -> bool:
@@ -199,17 +205,20 @@ class CorrelatorEnsemble:
         sorted_correlators = self._correlators.sort_values(
             by=["MC_Time", "Time", "Internal1", "Internal2"]
         )
-        return sorted_correlators.Correlation.values.reshape(
+        return sorted_correlators.Correlation.to_numpy().reshape(
             self.num_samples, self.NT, self.num_internal, self.num_internal
         )
 
     def get_numpy_vevs(self: Self) -> np.array:
         sorted_vevs = self._vevs.sort_values(by=["MC_Time", "Internal"])
-        return sorted_vevs.Vac_exp.values.reshape(self.num_samples, self.num_internal)
+        return sorted_vevs.Vac_exp.to_numpy().reshape(
+            self.num_samples, self.num_internal
+        )
 
-    def get_pyerrors(self: Self, subtract: bool = False) -> pe.Corr:
+    def get_pyerrors(self: Self, *, subtract: bool = False) -> pe.Corr:
         if subtract and not hasattr(self, "_vevs"):
-            raise ValueError("Can't subtract vevs that have not been read.")
+            message = "Can't subtract vevs that have not been read."
+            raise ValueError(message)
 
         return pe.Corr(
             to_obs_array(self.get_numpy(), self.ensemble_name)

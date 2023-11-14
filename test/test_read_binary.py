@@ -26,7 +26,7 @@ def header() -> dict[str, int]:
     return {name: i + 1 for i, name in enumerate(HEADER_NAMES)}
 
 
-def columns_from_header(header: dict[str, int], vev: bool = False) -> pd.DataFrame:
+def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.DataFrame:
     index_ranges = [
         range(1, header["Nbin"] + 1),  # Bin_index
         range(1, header["Nbl"] + 1),  # Blocking_index1
@@ -74,7 +74,7 @@ def columns_from_header(header: dict[str, int], vev: bool = False) -> pd.DataFra
     )
 
 
-def create_data(header: dict[str, int], vev: bool = False) -> np.array:
+def create_data(header: dict[str, int], *, vev: bool = False) -> np.array:
     return np.random.random(columns_from_header(header, vev=vev).shape[0])
 
 
@@ -141,7 +141,7 @@ def test_read_correlators_binary_freezes_the_ensemble(
     corr_file: BinaryIO, filename: str
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
-    assert answer._frozen
+    assert answer.frozen
 
 
 ### Actually functional behavior

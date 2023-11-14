@@ -32,7 +32,7 @@ def vev_columns() -> list[str]:
 
 def create_data(columns: list[str]) -> np.array:
     indexing_data = np.array(
-        [x for x in itertools.product(*[range(5) for col in columns[:-1]])]
+        list(itertools.product(*[range(5) for col in columns[:-1]]))
     )
     return np.concatenate(
         [indexing_data, np.arange(indexing_data.shape[0]).reshape(-1, 1)], axis=1
@@ -105,7 +105,7 @@ def test_read_correlators_fortran_freezes_the_ensemble(
     full_file: TextIO, filename: str
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert answer._frozen
+    assert answer.frozen
 
 
 ### Actually functional behavior
@@ -123,18 +123,18 @@ def test_read_correlators_fortran_preserves_column_names(
     full_file: TextIO, filename: str, columns: list[str]
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert set(answer.correlators.columns) == set(columns + ["channel"])
+    assert set(answer.correlators.columns) == {*columns, "channel"}
 
 
 def test_read_correlators_fortran_preserves_data(
     full_file: TextIO, filename: str, data: np.array
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert (answer.correlators.drop("channel", axis=1).values == data).all()
+    assert (answer.correlators.drop("channel", axis=1).to_numpy() == data).all()
 
 
 def test_read_correlators_fortran_preserves_data_in_vev(
     full_file: TextIO, filename: str, vev_data: np.array, vev_file: TextIO
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename, vev_file=vev_file)
-    assert (answer.vevs.drop("channel", axis="columns").values == vev_data).all()
+    assert (answer.vevs.drop("channel", axis="columns").to_numpy() == vev_data).all()

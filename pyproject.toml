@@ -27,4 +27,5 @@ dependencies = [
 "Bug Tracker" = "https://github.com/edbennett/glue_analysis/issues"
 
 [tool.ruff.lint]
-select = ["E", "F", "B", "UP", "SIM", "I", "ANN"]
+select = ["ALL"]
+ignore = ["D", "S101", "N", "COM812", "ISC001"]

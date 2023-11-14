@@ -69,23 +69,24 @@ def vev_data() -> CorrelatorData:
 def frozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
-    return create_corr_ensemble(filename, corr_data, vev_data, True)
+    return create_corr_ensemble(filename, corr_data, vev_data, frozen=True)
 
 
 @pytest.fixture()
 def unfrozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
-    return create_corr_ensemble(filename, corr_data, vev_data, False)
+    return create_corr_ensemble(filename, corr_data, vev_data, frozen=False)
 
 
 def create_corr_ensemble(
-    filename: str, corr_data: CorrelatorData, vev_data: VEVData, frozen: bool
+    filename: str, corr_data: CorrelatorData, vev_data: VEVData, *, frozen: bool
 ) -> CorrelatorEnsemble:
     corr_ensemble = CorrelatorEnsemble(filename)
     corr_ensemble.correlators = corr_data
     corr_ensemble.vevs = vev_data
-    corr_ensemble._frozen = frozen
+    if frozen:
+        corr_ensemble.freeze()
     return corr_ensemble
 
 
@@ -122,7 +123,7 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
 
 
 @pytest.mark.parametrize(
-    "prop,value",
+    ("prop", "value"),
     [
         ("NT", LENGTH_TIME),
         ("num_internal", LENGTH_INTERNAL),
@@ -159,14 +160,14 @@ def test_correlator_ensemble_returns_correct_numpy_data(
 ) -> None:
     assert (
         frozen_corr_ensemble.get_numpy().reshape(-1)
-        == frozen_corr_ensemble.correlators["Correlation"].values
+        == frozen_corr_ensemble.correlators["Correlation"].to_numpy()
     ).all()
 
 
 def test_correlator_ensemble_returns_sorted_numpy_data(
     unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    expected = unfrozen_corr_ensemble.correlators["Correlation"].values
+    expected = unfrozen_corr_ensemble.correlators["Correlation"].to_numpy()
     unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.sample(
         frac=1
     )
@@ -187,14 +188,14 @@ def test_correlator_ensemble_returns_correct_numpy_data_for_vevs(
 ) -> None:
     assert (
         frozen_corr_ensemble.get_numpy_vevs().reshape(-1)
-        == frozen_corr_ensemble.vevs["Vac_exp"].values
+        == frozen_corr_ensemble.vevs["Vac_exp"].to_numpy()
     ).all()
 
 
 def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
     unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    expected = unfrozen_corr_ensemble.vevs["Vac_exp"].values
+    expected = unfrozen_corr_ensemble.vevs["Vac_exp"].to_numpy()
     unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.sample(frac=1)
     assert (
         unfrozen_corr_ensemble.freeze().get_numpy_vevs().reshape(-1) == expected
@@ -204,8 +205,10 @@ def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
 def test_correlator_ensemble_raises_for_subtract_without_vevs_present(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
-    del frozen_corr_ensemble._vevs
-    with pytest.raises(ValueError):
+    del frozen_corr_ensemble._vevs  # noqa: SLF001
+    with pytest.raises(
+        ValueError, match="Can't subtract vevs that have not been read."
+    ):
         frozen_corr_ensemble.get_pyerrors(subtract=True)
 
 
@@ -260,7 +263,7 @@ def test_correlator_ensemble_defaults_to_glue_bins_as_ensemble_name(
 
 
 @pytest.mark.parametrize(
-    "data,ensemble_name",
+    ("data", "ensemble_name"),
     [
         (np.ones(10), "some-name"),
         (np.ones(10), "other-name"),
@@ -338,21 +341,28 @@ def test_correlator_ensemble_does_not_allow_garbage_vevs_on_freezing(
 
 
 @pytest.mark.parametrize(
-    "column_name", CorrelatorData.get_metadata()[None]["columns"].keys()
+    "column_name",
+    CorrelatorData.get_metadata()[None]["columns"].keys(),
 )
 def test_correlator_ensemble_freezing_fails_with_missing_column(
-    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+    column_name: str,
 ) -> None:
-    unfrozen_corr_ensemble.correlators.drop(column_name, axis="columns", inplace=True)
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.drop(
+        column_name, axis="columns"
+    )
     with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
 
 
 @pytest.mark.parametrize("column_name", VEVData.get_metadata()[None]["columns"].keys())
 def test_correlator_ensemble_freezing_fails_with_missing_column_in_vevs(
-    unfrozen_corr_ensemble: CorrelatorEnsemble, column_name: str
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+    column_name: str,
 ) -> None:
-    unfrozen_corr_ensemble.vevs.drop(column_name, axis="columns", inplace=True)
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.vevs.drop(
+        column_name, axis="columns"
+    )
     with pytest.raises(pa.errors.SchemaError):
         unfrozen_corr_ensemble.freeze()
 

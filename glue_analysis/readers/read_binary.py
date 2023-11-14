@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+from pathlib import Path
 from typing import Any, BinaryIO
 
 import numpy as np
 import pandas as pd
 from pandera.typing import DataFrame as DataFrameType
 
-from ..correlator import CorrelatorData, CorrelatorEnsemble, VEVData
+from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
 
 LENGTH_OF_CORRELATOR_INDEXING = {
     "MC_Time": lambda header: header["Nbin"],
@@ -36,37 +37,41 @@ class ParsingError(Exception):
 
 def read_correlators_binary(
     corr_filename: str,
-    channel: str = "",
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
-    with open(corr_filename, "rb") as corr_file:
+    with Path(corr_filename).open("rb") as corr_file:
         if vev_filename:
-            with open(vev_filename, "rb") as vev_file:
+            with Path(vev_filename).open("rb") as vev_file:
                 return _read_correlators_binary(
-                    corr_file, corr_filename, channel, vev_file, metadata
+                    corr_file, corr_filename, vev_file, metadata
                 )
 
-        return _read_correlators_binary(
-            corr_file, corr_filename, channel, None, metadata
-        )
+        return _read_correlators_binary(corr_file, corr_filename, None, metadata)
 
 
 def _read_correlators_binary(
     corr_file: BinaryIO,
     filename: str,
-    channel: str = "",
     vev_file: BinaryIO | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
     correlators.correlators = _make_compliant_correlator_data(
-        _read(corr_file, correlators.metadata, vev=False)
+        _read(
+            corr_file,
+            _columns_from_header(correlators.metadata, CORRELATOR_INDEXING_COLUMNS),
+            CORRELATOR_VALUE_COLUMN_NAME,
+        )
     )
     if vev_file:
         correlators.vevs = _make_compliant_vevs_data(
-            _read(vev_file, correlators.metadata, vev=True)
+            _read(
+                vev_file,
+                _columns_from_header(correlators.metadata, VEV_INDEXING_COLUMNS),
+                VEV_VALUE_COLUMN_NAME,
+            )
         )
     return correlators.freeze()
 
@@ -92,10 +97,15 @@ def _make_compliant_correlator_data(
     ).drop(["Blocking_index1", "Blocking_index2"], axis="columns")
 
 
-def _read(file: BinaryIO, header: dict[str, int], vev: bool) -> pd.DataFrame:
+def _read(
+    file: BinaryIO,
+    # could be more precise, i.e., only indexing portion of
+    # DataFrameType[CorrelatorData | VEVData]:
+    correlators: pd.DataFrame,
+    value_column_name: str,
+) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
-    correlators = _columns_from_header(header, vev)
-    correlators[VEV_VALUE_COLUMN_NAME if vev else CORRELATOR_VALUE_COLUMN_NAME] = (
+    correlators[value_column_name] = (
         # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
         np.frombuffer(file.read(), dtype=np.float64)
     )
@@ -121,10 +131,11 @@ def _assemble_metadata(
                 key: {"metadata": metadata[key], "header": final_metadata[key]}
                 for key in conflicting_keys
             }
-            raise ParsingError(
+            message = (
                 "Metadata contains the following entries which differ from"
                 f"the header: {conflicts}."
             )
+            raise ParsingError(message)
         final_metadata |= metadata
     return final_metadata
 
@@ -143,8 +154,7 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
     return header
 
 
-def _columns_from_header(header: dict[str, int], vev: bool) -> pd.DataFrame:
-    columns = VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS
+def _columns_from_header(header: dict[str, int], columns: list[str]) -> pd.DataFrame:
     return (
         pd.MultiIndex.from_product(
             [
