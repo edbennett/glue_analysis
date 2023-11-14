@@ -134,14 +134,14 @@ class CorrelatorEnsemble:
         if not isinstance(self._correlators, pd.DataFrame):
             message = (
                 "Correlator data is expected to be pandas.Dataframe "
-                f"but {type(self._correlators)} was found.",
+                f"but {type(self._correlators)} was found."
             )
             raise TypeError(message)
 
         if hasattr(self, "_vevs") and not isinstance(self._vevs, pd.DataFrame):
             message = (
                 "VEV data is expected to be pandas.Dataframe "
-                f"but {type(self._vevs)} was found.",
+                f"but {type(self._vevs)} was found."
             )
             raise TypeError(message)
 
@@ -163,7 +163,7 @@ class CorrelatorEnsemble:
         else:
             message = (
                 "This instance is frozen. "
-                "You are not allowed to modify correlators anymore.",
+                "You are not allowed to modify correlators anymore."
             )
             raise FrozenError(message)
 
@@ -181,7 +181,7 @@ class CorrelatorEnsemble:
         else:
             message = (
                 "This instance is frozen. "
-                "You are not allowed to modify vevs anymore.",
+                "You are not allowed to modify vevs anymore."
             )
             raise FrozenError(message)
 
