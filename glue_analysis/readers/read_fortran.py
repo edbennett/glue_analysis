@@ -70,8 +70,8 @@ def _normalise_vevs(vevs: pd.DataFrame, NT: int, num_configs: int) -> None:
     vevs["Vac_exp"] /= (NT * num_configs / len(set(vevs.MC_Time))) ** 0.5
 
 
-def _check_ensemble_divisibility(num_configs: int, num_samples: int) -> None:
-    if num_configs % num_samples != 0:
+def _check_ensemble_divisibility(num_configs: int | None, num_samples: int) -> None:
+    if num_configs is not None and num_configs % num_samples != 0:
         message = (
             f"Number of configurations {num_configs} is not divisible by "
             f"number of samples {num_samples}."
@@ -96,9 +96,7 @@ def _read_correlators_fortran(
     correlators = CorrelatorEnsemble(filename)
     correlators.correlators = _read_correlator_file(corr_file)
 
-    _check_ensemble_divisibility(
-        metadata.get("num_configs", 0), correlators.num_samples
-    )
+    _check_ensemble_divisibility(metadata.get("num_configs"), correlators.num_samples)
 
     if vev_file:
         correlators.vevs = _read_vev_file(vev_file)
