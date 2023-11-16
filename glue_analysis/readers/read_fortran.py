@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from copy import deepcopy
 from functools import lru_cache
 from logging import warning
 from pathlib import Path
@@ -78,8 +79,7 @@ def _read_correlators_fortran(
     vev_file: TextIO | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
-    if not metadata:
-        metadata = {}
+    metadata = deepcopy(metadata) if metadata else {}
 
     if vev_file and (missing := {"NT", "num_configs"} - set(metadata.keys())):
         message = f"{missing} must be specified to normalise VEVs correctly."
