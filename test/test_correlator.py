@@ -125,11 +125,11 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
 @pytest.mark.parametrize(
     ("prop", "value"),
     [
-        ("max_time", LENGTH_TIME),
+        ("num_timeslices", LENGTH_TIME),
         ("num_internal", LENGTH_INTERNAL),
         ("num_samples", LENGTH_MC_TIME),
     ],
-    ids=["max_time", "num_internal", "num_samples"],
+    ids=["num_timeslices", "num_internal", "num_samples"],
 )
 def test_correlator_ensemble_reports_correct_properties(
     unfrozen_corr_ensemble: CorrelatorEnsemble, prop: str, value: int
