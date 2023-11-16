@@ -125,11 +125,11 @@ def test_correlator_ensemble_allows_to_set_vevs_with_correct_data(
 @pytest.mark.parametrize(
     ("prop", "value"),
     [
-        ("NT", LENGTH_TIME),
+        ("max_time", LENGTH_TIME),
         ("num_internal", LENGTH_INTERNAL),
         ("num_samples", LENGTH_MC_TIME),
     ],
-    ids=["NT", "num_internal", "num_samples"],
+    ids=["max_time", "num_internal", "num_samples"],
 )
 def test_correlator_ensemble_reports_correct_properties(
     unfrozen_corr_ensemble: CorrelatorEnsemble, prop: str, value: int
@@ -257,7 +257,8 @@ def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (
-                corr_np[:, i, j] - vevs_np[i] * vevs_np[j] / frozen_corr_ensemble.NT**2
+                corr_np[:, i, j]
+                - vevs_np[i] * vevs_np[j] / frozen_corr_ensemble.max_time**2
                 == corr.item(i, j).plottable()[1]
             ).all()
 

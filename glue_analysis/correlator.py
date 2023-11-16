@@ -190,7 +190,7 @@ class CorrelatorEnsemble:
         return self._frozen
 
     @property
-    def NT(self: Self) -> int:
+    def max_time(self: Self) -> int:
         return max(self._correlators.Time)
 
     @property
@@ -206,7 +206,7 @@ class CorrelatorEnsemble:
             by=["MC_Time", "Time", "Internal1", "Internal2"]
         )
         return sorted_correlators.Correlation.to_numpy().reshape(
-            self.num_samples, self.NT, self.num_internal, self.num_internal
+            self.num_samples, self.max_time, self.num_internal, self.num_internal
         )
 
     def get_numpy_vevs(self: Self) -> np.array:
@@ -226,7 +226,7 @@ class CorrelatorEnsemble:
                 np.outer(
                     *(2 * [to_obs_array(self.get_numpy_vevs(), self.ensemble_name)])
                 )
-                / self.NT**2
+                / self.max_time**2
                 if subtract
                 else 0.0
             )
