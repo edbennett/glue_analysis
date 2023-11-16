@@ -226,7 +226,6 @@ class CorrelatorEnsemble:
                 np.outer(
                     *(2 * [to_obs_array(self.get_numpy_vevs(), self.ensemble_name)])
                 )
-                / self.max_time**2
                 if subtract
                 else 0.0
             )

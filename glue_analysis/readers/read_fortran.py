@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from functools import lru_cache
+from logging import warn
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -12,6 +13,8 @@ from glue_analysis.correlator import CorrelatorEnsemble
 @lru_cache(maxsize=8)
 def read_correlators_fortran(
     corr_filename: str,
+    NT: int,
+    num_configs: int,
     channel: str = "",
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
@@ -20,16 +23,18 @@ def read_correlators_fortran(
         if vev_filename:
             with Path(vev_filename).open() as vev_file:
                 return _read_correlators_fortran(
-                    corr_file, corr_filename, channel, vev_file, metadata
+                    corr_file, NT, num_configs, corr_filename, channel, vev_file, metadata
                 )
 
         return _read_correlators_fortran(
-            corr_file, corr_filename, channel, None, metadata
+            corr_file, NT, num_configs, corr_filename, channel, None, metadata
         )
 
 
 def _read_correlators_fortran(
     corr_file: TextIO,
+    NT: int,
+    num_configs: int,
     filename: str,
     channel: str = "",
     vev_file: TextIO | None = None,
@@ -66,10 +71,17 @@ def _read_correlators_fortran(
             axis="columns",
         )
         correlators.vevs["channel"] = channel
+        correlators.vevs["Vac_exp"] /= (NT * num_configs / correlators.num_samples) ** 0.5
 
     if not metadata:
         metadata = {}
 
     correlators.metadata = metadata
+
+    if num_configs % correlators.num_samples != 0:
+        warn(
+            f"Number of configurations {num_configs} is not divisible by "
+            f"number of samples {correlators.num_samples}."
+        )
 
     return correlators.freeze()

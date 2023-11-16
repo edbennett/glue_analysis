@@ -257,8 +257,7 @@ def test_correlator_ensemble_returned_correlator_has_correct_subtracted_averages
             # not a perfect test: check for each entry of correlation matrix
             # that MC average equals the naive numpy result
             assert (
-                corr_np[:, i, j]
-                - vevs_np[i] * vevs_np[j] / frozen_corr_ensemble.max_time**2
+                corr_np[:, i, j] - vevs_np[i] * vevs_np[j]
                 == corr.item(i, j).plottable()[1]
             ).all()
 
