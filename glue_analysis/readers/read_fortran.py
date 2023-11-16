@@ -87,6 +87,7 @@ def _read_correlators_fortran(
 
     correlators = CorrelatorEnsemble(filename)
     correlators.correlators = _read_single_file(corr_file)
+    correlators.correlators["channel"] = channel
 
     _check_ensemble_divisibility(metadata.get("num_configs"), correlators.num_samples)
 
@@ -95,7 +96,6 @@ def _read_correlators_fortran(
         correlators.vevs["channel"] = channel
         _normalise_vevs(correlators.vevs, metadata["NT"], metadata["num_configs"])
 
-    correlators.correlators["channel"] = channel
     correlators.metadata = metadata
 
     return correlators.freeze()
