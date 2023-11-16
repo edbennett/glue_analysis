@@ -2,7 +2,7 @@
 
 import itertools
 from io import StringIO
-from typing import TextIO
+from typing import Any, TextIO
 
 import numpy as np
 import pytest
@@ -22,12 +22,17 @@ def trivial_file() -> StringIO:
 
 @pytest.fixture()
 def columns() -> list[str]:
-    return ["MC_Time", "Time", "Internal1", "Internal2", "Correlation"]
+    return ["Bin_index", "Time", "Op1_index", "Op2_index", "Correlation"]
 
 
 @pytest.fixture()
 def vev_columns() -> list[str]:
-    return ["MC_Time", "Internal", "Vac_exp"]
+    return ["Bin_index", "Op_index", "Vac_exp"]
+
+
+@pytest.fixture()
+def vev_metadata() -> dict[str, Any]:
+    return {"NT": 24, "num_configs": 200}
 
 
 def create_data(columns: list[str]) -> np.array:
@@ -119,11 +124,30 @@ def test_read_correlators_fortran_passes_on_metadata(
     assert answer.metadata == metadata
 
 
-def test_read_correlators_fortran_preserves_column_names(
-    full_file: TextIO, filename: str, columns: list[str]
+def test_read_correlators_fortran_correctly_names_columns(
+    full_file: TextIO, filename: str
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert set(answer.correlators.columns) == {*columns, "channel"}
+    assert set(answer.correlators.columns) == {
+        "MC_Time",
+        "Time",
+        "Internal1",
+        "Internal2",
+        "Correlation",
+        "channel",
+    }
+
+
+def test_read_correlators_fortran_correctly_names_vev_columns(
+    full_file: TextIO,
+    filename: str,
+    vev_file: TextIO,
+    vev_metadata: dict[str, Any],
+) -> None:
+    answer = _read_correlators_fortran(
+        full_file, filename, vev_file=vev_file, metadata=vev_metadata
+    )
+    assert set(answer.vevs.columns) == {"MC_Time", "Internal", "Vac_exp", "channel"}
 
 
 def test_read_correlators_fortran_preserves_data(
@@ -134,10 +158,14 @@ def test_read_correlators_fortran_preserves_data(
 
 
 def test_read_correlators_fortran_preserves_normalised_data_in_vev(
-    full_file: TextIO, filename: str, vev_data: np.array, vev_file: TextIO
+    full_file: TextIO,
+    filename: str,
+    vev_data: np.array,
+    vev_file: TextIO,
+    vev_metadata: dict[str, Any],
 ) -> None:
-    NT = 24
-    num_configs = 200
+    NT = vev_metadata["NT"]
+    num_configs = vev_metadata["num_configs"]
     num_bins = 5
     normalisation = (NT * num_configs / num_bins) ** 0.5
 
@@ -145,7 +173,7 @@ def test_read_correlators_fortran_preserves_normalised_data_in_vev(
         full_file,
         filename,
         vev_file=vev_file,
-        metadata={"NT": NT, "num_configs": num_configs},
+        metadata=vev_metadata,
     )
     normalised_vev_data = np.concatenate(
         [vev_data[:, :-1], vev_data[:, -1:] / normalisation],
