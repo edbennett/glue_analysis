@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from functools import lru_cache
-from logging import warn
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -23,7 +22,13 @@ def read_correlators_fortran(
         if vev_filename:
             with Path(vev_filename).open() as vev_file:
                 return _read_correlators_fortran(
-                    corr_file, NT, num_configs, corr_filename, channel, vev_file, metadata
+                    corr_file,
+                    NT,
+                    num_configs,
+                    corr_filename,
+                    channel,
+                    vev_file,
+                    metadata,
                 )
 
         return _read_correlators_fortran(
@@ -71,7 +76,9 @@ def _read_correlators_fortran(
             axis="columns",
         )
         correlators.vevs["channel"] = channel
-        correlators.vevs["Vac_exp"] /= (NT * num_configs / correlators.num_samples) ** 0.5
+        correlators.vevs["Vac_exp"] /= (
+            NT * num_configs / correlators.num_samples
+        ) ** 0.5
 
     if not metadata:
         metadata = {}
@@ -79,7 +86,7 @@ def _read_correlators_fortran(
     correlators.metadata = metadata
 
     if num_configs % correlators.num_samples != 0:
-        warn(
+        warning(
             f"Number of configurations {num_configs} is not divisible by "
             f"number of samples {correlators.num_samples}."
         )

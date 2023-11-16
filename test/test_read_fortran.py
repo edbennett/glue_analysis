@@ -146,4 +146,6 @@ def test_read_correlators_fortran_preserves_normalised_data_in_vev(
         [vev_data[:, :-1], vev_data[:, -1:] / normalisation],
         axis=1,
     )
-    assert (answer.vevs.drop("channel", axis="columns").to_numpy() == normalised_vev_data).all()
+    assert (
+        answer.vevs.drop("channel", axis="columns").to_numpy() == normalised_vev_data
+    ).all()
