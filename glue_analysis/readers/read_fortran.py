@@ -33,16 +33,18 @@ def read_correlators_fortran(
         )
 
 
-def _read_correlator_file(corr_file: TextIO) -> pd.DataFrame:
+def _read_single_file(file_to_read: TextIO) -> pd.DataFrame:
     return pd.read_csv(
-        corr_file,
+        file_to_read,
         delim_whitespace=True,
         converters={
             "Bin_index": int,
             "Time": int,
             "Op_index1": int,
             "Op_index2": int,
+            "Op_index": int,
             "Correlation": float,
+            "Vac_exp": float,
         },
     ).rename(
         {
@@ -50,18 +52,8 @@ def _read_correlator_file(corr_file: TextIO) -> pd.DataFrame:
             "Time": "Time",
             "Op1_index": "Internal1",
             "Op2_index": "Internal2",
+            "Op_index": "Internal",
         },
-        axis="columns",
-    )
-
-
-def _read_vev_file(vev_file: TextIO) -> pd.DataFrame:
-    return pd.read_csv(
-        vev_file,
-        delim_whitespace=True,
-        converters={"Bin_index": int, "Op_index": int, "Vac_exp": float},
-    ).rename(
-        {"Bin_index": "MC_Time", "Time": "Time", "Op_index": "Internal"},
         axis="columns",
     )
 
@@ -94,12 +86,12 @@ def _read_correlators_fortran(
         raise ValueError(message)
 
     correlators = CorrelatorEnsemble(filename)
-    correlators.correlators = _read_correlator_file(corr_file)
+    correlators.correlators = _read_single_file(corr_file)
 
     _check_ensemble_divisibility(metadata.get("num_configs"), correlators.num_samples)
 
     if vev_file:
-        correlators.vevs = _read_vev_file(vev_file)
+        correlators.vevs = _read_single_file(vev_file)
         correlators.vevs["channel"] = channel
         _normalise_vevs(correlators.vevs, metadata["NT"], metadata["num_configs"])
 
