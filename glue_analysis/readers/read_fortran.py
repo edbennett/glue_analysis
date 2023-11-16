@@ -55,8 +55,8 @@ def _read_correlators_fortran(
         {
             "Bin_index": "MC_Time",
             "Time": "Time",
-            "Op_index1": "Internal1",
-            "Op_index2": "Internal2",
+            "Op1_index": "Internal1",
+            "Op2_index": "Internal2",
         },
         axis="columns",
     )
