@@ -195,11 +195,11 @@ class CorrelatorEnsemble:
 
     @property
     def num_internal(self: Self) -> int:
-        return max(self._correlators.Internal1)
+        return len(set(self._correlators.Internal1))
 
     @property
     def num_samples(self: Self) -> int:
-        return max(self._correlators.MC_Time)
+        return len(set(self._correlators.MC_Time))
 
     def get_numpy(self: Self) -> np.array:
         sorted_correlators = self._correlators.sort_values(

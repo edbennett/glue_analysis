@@ -144,6 +144,28 @@ def test_correlator_ensemble_reports_correct_properties(
     assert getattr(unfrozen_corr_ensemble, prop) == value
 
 
+def test_correlator_ensemble_reports_correct_num_internal_for_other_types(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.correlators[
+        ["Internal1", "Internal2"]
+    ] = unfrozen_corr_ensemble.correlators[["Internal1", "Internal2"]].map(
+        lambda x: (x**2, str(x))  # make a non-integer type
+    )
+    assert unfrozen_corr_ensemble.num_internal == LENGTH_INTERNAL
+
+
+def test_correlator_ensemble_reports_correct_num_samples_with_gaps(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.correlators["MC_Time"] = unfrozen_corr_ensemble.correlators[
+        "MC_Time"
+    ].map(
+        lambda x: x**2  # such that max(MC_Time) != num_samples
+    )
+    assert unfrozen_corr_ensemble.num_samples == LENGTH_MC_TIME
+
+
 def test_correlator_ensemble_returns_correctly_shaped_numpy(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
