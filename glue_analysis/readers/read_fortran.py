@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from functools import lru_cache
+from logging import warning
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -86,9 +87,10 @@ def _read_correlators_fortran(
     correlators.metadata = metadata
 
     if num_configs % correlators.num_samples != 0:
-        warning(
+        message = (
             f"Number of configurations {num_configs} is not divisible by "
             f"number of samples {correlators.num_samples}."
         )
+        warning(message)
 
     return correlators.freeze()
