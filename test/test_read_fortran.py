@@ -164,10 +164,10 @@ def test_read_correlators_fortran_preserves_normalised_data_in_vev(
     vev_file: TextIO,
     vev_metadata: dict[str, Any],
 ) -> None:
-    NT = vev_metadata["NT"]
+    lattice_temporal_extent = vev_metadata["NT"]
     num_configs = vev_metadata["num_configs"]
     num_bins = 5
-    normalisation = (NT * num_configs / num_bins) ** 0.5
+    normalisation = (lattice_temporal_extent * num_configs / num_bins) ** 0.5
 
     answer = _read_correlators_fortran(
         full_file,
