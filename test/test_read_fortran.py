@@ -76,35 +76,35 @@ def vev_file(vev_columns: list[str]) -> StringIO:
 def test_read_correlators_fortran_records_filename(
     full_file: TextIO, filename: str
 ) -> None:
-    answer = _read_correlators_fortran(full_file, 24, 200, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert answer.filename == filename
 
 
 def test_read_correlators_fortran_creates_channel_column(
     full_file: TextIO, filename: str
 ) -> None:
-    answer = _read_correlators_fortran(full_file, 24, 200, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert "channel" in answer.correlators.columns
 
 
 def test_read_correlators_fortran_does_not_create_vev_if_not_given(
     full_file: TextIO, filename: str
 ) -> None:
-    answer = _read_correlators_fortran(full_file, 24, 200, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert not hasattr(answer, "vevs")
 
 
 def test_read_correlators_fortran_sets_not_given_metadata_to_empty_dict(
     full_file: TextIO, filename: str
 ) -> None:
-    answer = _read_correlators_fortran(full_file, 24, 200, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert answer.metadata == {}
 
 
 def test_read_correlators_fortran_freezes_the_ensemble(
     full_file: TextIO, filename: str
 ) -> None:
-    answer = _read_correlators_fortran(full_file, 24, 200, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert answer.frozen
 
 
@@ -115,21 +115,21 @@ def test_read_correlators_fortran_passes_on_metadata(
     full_file: TextIO, filename: str
 ) -> None:
     metadata = {"some": "thing"}
-    answer = _read_correlators_fortran(full_file, 24, 200, filename, metadata=metadata)
+    answer = _read_correlators_fortran(full_file, filename, metadata=metadata)
     assert answer.metadata == metadata
 
 
 def test_read_correlators_fortran_preserves_column_names(
     full_file: TextIO, filename: str, columns: list[str]
 ) -> None:
-    answer = _read_correlators_fortran(full_file, 24, 200, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert set(answer.correlators.columns) == {*columns, "channel"}
 
 
 def test_read_correlators_fortran_preserves_data(
     full_file: TextIO, filename: str, data: np.array
 ) -> None:
-    answer = _read_correlators_fortran(full_file, 24, 200, filename)
+    answer = _read_correlators_fortran(full_file, filename)
     assert (answer.correlators.drop("channel", axis=1).to_numpy() == data).all()
 
 
@@ -141,7 +141,12 @@ def test_read_correlators_fortran_preserves_normalised_data_in_vev(
     num_bins = 5
     normalisation = (NT * num_configs / num_bins) ** 0.5
 
-    answer = _read_correlators_fortran(full_file, 24, 200, filename, vev_file=vev_file)
+    answer = _read_correlators_fortran(
+        full_file,
+        filename,
+        vev_file=vev_file,
+        metadata={"NT": NT, "num_configs": num_configs},
+    )
     normalised_vev_data = np.concatenate(
         [vev_data[:, :-1], vev_data[:, -1:] / normalisation],
         axis=1,
