@@ -175,10 +175,10 @@ def test_read_correlators_fortran_preserves_normalised_data_in_vev(
         vev_file=vev_file,
         metadata=vev_metadata,
     )
-    normalised_vev_data = np.concatenate(
-        [vev_data[:, :-1], vev_data[:, -1:] / normalisation],
-        axis=1,
-    )
+
+    normalised_vev_data = vev_data.astype("float64")
+    normalised_vev_data[:, -1] /= normalisation
+
     assert (
         answer.vevs.drop("channel", axis="columns").to_numpy() == normalised_vev_data
     ).all()
