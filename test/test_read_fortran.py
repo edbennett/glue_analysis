@@ -5,10 +5,14 @@ from io import StringIO
 from typing import Any, TextIO
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from glue_analysis.correlator import CorrelatorData, VEVData
-from glue_analysis.readers.read_fortran import _read_correlators_fortran
+from glue_analysis.readers.read_fortran import (
+    _normalise_vevs,
+    _read_correlators_fortran,
+)
 
 
 @pytest.fixture()
@@ -45,6 +49,11 @@ def create_data(columns: list[str]) -> np.array:
     return np.concatenate(
         [indexing_data, np.arange(indexing_data.shape[0]).reshape(-1, 1)], axis=1
     )
+
+
+@pytest.fixture()
+def vev_df() -> pd.DataFrame:
+    return pd.DataFrame({"MC_Time": [1, 1, 1, 1, 1], "Vac_exp": [1, 2, 3, 4, 5]})
 
 
 @pytest.fixture()
@@ -204,3 +213,15 @@ def test_read_correlators_fortran_rejects_vevs_with_missing_metadata(
         _read_correlators_fortran(
             full_file, filename, vev_file=vev_file, metadata=metadata
         )
+
+
+def test_normalize_vevs_notinplace(vev_df: pd.DataFrame) -> None:
+    result: pd.DataFrame = _normalise_vevs(vev_df, 10, 10, inplace=False)
+    assert (result.Vac_exp == [0.1, 0.2, 0.3, 0.4, 0.5]).all()
+    assert result is not vev_df
+
+
+def test_normalize_vevs_inplace(vev_df: pd.DataFrame) -> None:
+    result = _normalise_vevs(vev_df, 10, 10, inplace=True)
+    assert result is None
+    assert (vev_df.Vac_exp == [0.1, 0.2, 0.3, 0.4, 0.5]).all()
