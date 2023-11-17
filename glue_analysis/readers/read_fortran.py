@@ -2,7 +2,6 @@
 
 from copy import deepcopy
 from functools import lru_cache
-from logging import warning
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -78,7 +77,7 @@ def _check_ensemble_divisibility(num_configs: int | None, num_samples: int) -> N
             f"Number of configurations {num_configs} is not divisible by "
             f"number of samples {num_samples}."
         )
-        warning(message)
+        raise ValueError(message)
 
 
 def _read_correlators_fortran(
