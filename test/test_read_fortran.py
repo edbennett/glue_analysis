@@ -190,7 +190,7 @@ def test_read_correlators_fortran_rejects_bad_cfg_count(
 ) -> None:
     with pytest.raises(
         ValueError,
-        match="Number of configurations.*is not divisible by number of samples .*",
+        match="Number of configurations 13 is not divisible by number of samples .*",
     ):
         _read_correlators_fortran(full_file, filename, metadata={"num_configs": 13})
 
