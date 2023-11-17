@@ -32,6 +32,7 @@ def vev_columns() -> list[str]:
 
 @pytest.fixture(params=[(24, 200), (36, 4000), (48, 2400)])
 def vev_metadata(request) -> dict[str, Any]:  # noqa: ANN001
+    # pytest makes it non-trivial to get the type of `request`, so annotation is omitted
     lattice_temporal_extent, num_configs = request.param
     return {"NT": lattice_temporal_extent, "num_configs": num_configs}
 
