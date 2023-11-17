@@ -2,12 +2,17 @@
 
 import itertools
 from io import StringIO
-from typing import TextIO
+from typing import Any, TextIO
 
 import numpy as np
+import pandas as pd
 import pytest
 
-from glue_analysis.readers.read_fortran import _read_correlators_fortran
+from glue_analysis.correlator import CorrelatorData, VEVData
+from glue_analysis.readers.read_fortran import (
+    _normalise_vevs,
+    _read_correlators_fortran,
+)
 
 
 @pytest.fixture()
@@ -22,12 +27,19 @@ def trivial_file() -> StringIO:
 
 @pytest.fixture()
 def columns() -> list[str]:
-    return ["MC_Time", "Time", "Internal1", "Internal2", "Correlation"]
+    return ["Bin_index", "Time", "Op1_index", "Op2_index", "Correlation"]
 
 
 @pytest.fixture()
 def vev_columns() -> list[str]:
-    return ["MC_Time", "Internal", "Vac_exp"]
+    return ["Bin_index", "Op_index", "Vac_exp"]
+
+
+@pytest.fixture(params=[(24, 200), (36, 4000), (48, 2400)])
+def vev_metadata(request) -> dict[str, Any]:  # noqa: ANN001
+    # pytest makes it non-trivial to get the type of `request`, so annotation is omitted
+    lattice_temporal_extent, num_configs = request.param
+    return {"NT": lattice_temporal_extent, "num_configs": num_configs}
 
 
 def create_data(columns: list[str]) -> np.array:
@@ -37,6 +49,16 @@ def create_data(columns: list[str]) -> np.array:
     return np.concatenate(
         [indexing_data, np.arange(indexing_data.shape[0]).reshape(-1, 1)], axis=1
     )
+
+
+@pytest.fixture()
+def some_numbers() -> np.ndarray:
+    return np.arange(1, 6)
+
+
+@pytest.fixture()
+def vev_df(some_numbers: np.ndarray) -> pd.DataFrame:
+    return pd.DataFrame({"MC_Time": [1, 1, 1, 1, 1], "Vac_exp": some_numbers})
 
 
 @pytest.fixture()
@@ -119,11 +141,23 @@ def test_read_correlators_fortran_passes_on_metadata(
     assert answer.metadata == metadata
 
 
-def test_read_correlators_fortran_preserves_column_names(
-    full_file: TextIO, filename: str, columns: list[str]
+def test_read_correlators_fortran_correctly_names_columns(
+    full_file: TextIO, filename: str
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert set(answer.correlators.columns) == {*columns, "channel"}
+    assert set(answer.correlators.columns) == {*CorrelatorData.columns, "channel"}
+
+
+def test_read_correlators_fortran_correctly_names_vev_columns(
+    full_file: TextIO,
+    filename: str,
+    vev_file: TextIO,
+    vev_metadata: dict[str, Any],
+) -> None:
+    answer = _read_correlators_fortran(
+        full_file, filename, vev_file=vev_file, metadata=vev_metadata
+    )
+    assert set(answer.vevs.columns) == {*VEVData.columns, "channel"}
 
 
 def test_read_correlators_fortran_preserves_data(
@@ -133,8 +167,76 @@ def test_read_correlators_fortran_preserves_data(
     assert (answer.correlators.drop("channel", axis=1).to_numpy() == data).all()
 
 
-def test_read_correlators_fortran_preserves_data_in_vev(
-    full_file: TextIO, filename: str, vev_data: np.array, vev_file: TextIO
+def test_read_correlators_fortran_preserves_normalised_data_in_vev(
+    full_file: TextIO,
+    filename: str,
+    vev_data: np.array,
+    vev_file: TextIO,
+    vev_metadata: dict[str, Any],
 ) -> None:
-    answer = _read_correlators_fortran(full_file, filename, vev_file=vev_file)
-    assert (answer.vevs.drop("channel", axis="columns").to_numpy() == vev_data).all()
+    lattice_temporal_extent = vev_metadata["NT"]
+    num_configs = vev_metadata["num_configs"]
+    num_bins = 5
+    normalisation = (lattice_temporal_extent * num_configs / num_bins) ** 0.5
+
+    answer = _read_correlators_fortran(
+        full_file,
+        filename,
+        vev_file=vev_file,
+        metadata=vev_metadata,
+    )
+
+    normalised_vev_data = vev_data.astype("float64")
+    normalised_vev_data[:, -1] /= normalisation
+
+    assert (
+        answer.vevs.drop("channel", axis="columns").to_numpy() == normalised_vev_data
+    ).all()
+
+
+def test_read_correlators_fortran_rejects_bad_cfg_count(
+    full_file: TextIO,
+    filename: str,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="Number of configurations 13 is not divisible by number of samples .*",
+    ):
+        _read_correlators_fortran(full_file, filename, metadata={"num_configs": 13})
+
+
+@pytest.mark.parametrize("metadata", [{}, {"num_configs": 200}, {"NT": 24}])
+def test_read_correlators_fortran_rejects_vevs_with_missing_metadata(
+    full_file: TextIO,
+    filename: str,
+    vev_file: TextIO,
+    metadata: dict[str, Any],
+) -> None:
+    with pytest.raises(
+        ValueError, match=".*must be specified to normalise VEVs correctly."
+    ):
+        _read_correlators_fortran(
+            full_file, filename, vev_file=vev_file, metadata=metadata
+        )
+
+
+def test_normalize_vevs_notinplace(
+    vev_df: pd.DataFrame, some_numbers: np.ndarray
+) -> None:
+    num_configs = 10
+    lattice_temporal_extent = 10
+    normalisation = (num_configs * lattice_temporal_extent) ** 0.5
+    result: pd.DataFrame = _normalise_vevs(
+        vev_df, num_configs, lattice_temporal_extent, inplace=False
+    )
+    assert (result.Vac_exp == some_numbers / normalisation).all()
+    assert result is not vev_df
+
+
+def test_normalize_vevs_inplace(vev_df: pd.DataFrame, some_numbers: list[int]) -> None:
+    num_configs = 10
+    lattice_temporal_extent = 10
+    normalisation = (num_configs * lattice_temporal_extent) ** 0.5
+    result = _normalise_vevs(vev_df, num_configs, lattice_temporal_extent, inplace=True)
+    assert result is None
+    assert (vev_df.Vac_exp == some_numbers / normalisation).all()

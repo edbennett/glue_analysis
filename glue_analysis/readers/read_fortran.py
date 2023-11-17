@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, TextIO
@@ -20,12 +21,63 @@ def read_correlators_fortran(
         if vev_filename:
             with Path(vev_filename).open() as vev_file:
                 return _read_correlators_fortran(
-                    corr_file, corr_filename, channel, vev_file, metadata
+                    corr_file,
+                    corr_filename,
+                    channel,
+                    vev_file,
+                    metadata,
                 )
 
         return _read_correlators_fortran(
             corr_file, corr_filename, channel, None, metadata
         )
+
+
+def _read_single_file(file_to_read: TextIO) -> pd.DataFrame:
+    return pd.read_csv(
+        file_to_read,
+        delim_whitespace=True,
+        converters={
+            "Bin_index": int,
+            "Time": int,
+            "Op_index1": int,
+            "Op_index2": int,
+            "Op_index": int,
+            "Correlation": float,
+            "Vac_exp": float,
+        },
+    ).rename(
+        {
+            "Bin_index": "MC_Time",
+            "Time": "Time",
+            "Op1_index": "Internal1",
+            "Op2_index": "Internal2",
+            "Op_index": "Internal",
+        },
+        axis="columns",
+    )
+
+
+def _normalise_vevs(
+    vevs: pd.DataFrame, NT: int, num_configs: int, *, inplace: bool = False
+) -> None | pd.DataFrame:
+    if not inplace:
+        vevs = vevs.copy()
+
+    vevs["Vac_exp"] /= (NT * num_configs / len(set(vevs.MC_Time))) ** 0.5
+    if not inplace:
+        return vevs
+
+    return None
+
+
+def _check_ensemble_divisibility(num_configs: int | None, num_samples: int) -> None:
+    if num_configs is not None and num_configs % num_samples != 0:
+        message = (
+            f"Number of configurations {num_configs} is not divisible by "
+            f"number of samples {num_samples}."
+        )
+        raise ValueError(message)
 
 
 def _read_correlators_fortran(
@@ -35,40 +87,27 @@ def _read_correlators_fortran(
     vev_file: TextIO | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:
-    correlators = CorrelatorEnsemble(filename)
-    correlators.correlators = pd.read_csv(
-        corr_file,
-        delim_whitespace=True,
-        converters={
-            "Bin_index": int,
-            "Time": int,
-            "Op_index1": int,
-            "Op_index2": int,
-            "Correlation": float,
-        },
-    ).rename(
-        {
-            "Bin_index": "MC_Time",
-            "Time": "Time",
-            "Op_index1": "Internal1",
-            "Op_index2": "Internal2",
-        },
-        axis="columns",
-    )
-    correlators.correlators["channel"] = channel
-    if vev_file:
-        correlators.vevs = pd.read_csv(
-            vev_file,
-            delim_whitespace=True,
-            converters={"Bin_index": int, "Op_index": int, "Vac_exp": float},
-        ).rename(
-            {"Bin_index": "MC_Time", "Time": "Time", "Op_index": "Internal"},
-            axis="columns",
-        )
-        correlators.vevs["channel"] = channel
+    metadata = deepcopy(metadata) if metadata else {}
 
-    if not metadata:
-        metadata = {}
+    if vev_file and (missing := {"NT", "num_configs"} - set(metadata.keys())):
+        message = f"{missing} must be specified to normalise VEVs correctly."
+        raise ValueError(message)
+
+    correlators = CorrelatorEnsemble(filename)
+    correlators.correlators = _read_single_file(corr_file)
+    correlators.correlators["channel"] = channel
+
+    _check_ensemble_divisibility(metadata.get("num_configs"), correlators.num_samples)
+
+    if vev_file:
+        correlators.vevs = _read_single_file(vev_file)
+        correlators.vevs["channel"] = channel
+        _normalise_vevs(
+            correlators.vevs,
+            metadata["NT"],
+            metadata["num_configs"],
+            inplace=True,  # noqa: PD002
+        )
 
     correlators.metadata = metadata
 
