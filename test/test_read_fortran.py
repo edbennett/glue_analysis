@@ -52,12 +52,12 @@ def create_data(columns: list[str]) -> np.array:
 
 
 @pytest.fixture()
-def some_numbers() -> list[int]:
-    return [1, 2, 3, 4, 5]
+def some_numbers() -> np.ndarray:
+    return np.arange(1, 6)
 
 
 @pytest.fixture()
-def vev_df(some_numbers: list[int]) -> pd.DataFrame:
+def vev_df(some_numbers: np.ndarray) -> pd.DataFrame:
     return pd.DataFrame({"MC_Time": [1, 1, 1, 1, 1], "Vac_exp": some_numbers})
 
 
@@ -221,7 +221,7 @@ def test_read_correlators_fortran_rejects_vevs_with_missing_metadata(
 
 
 def test_normalize_vevs_notinplace(
-    vev_df: pd.DataFrame, some_numbers: list[int]
+    vev_df: pd.DataFrame, some_numbers: np.ndarray
 ) -> None:
     num_configs = 10
     lattice_temporal_extent = 10
@@ -229,7 +229,7 @@ def test_normalize_vevs_notinplace(
     result: pd.DataFrame = _normalise_vevs(
         vev_df, num_configs, lattice_temporal_extent, inplace=False
     )
-    assert (result.Vac_exp == [num / normalisation for num in some_numbers]).all()
+    assert (result.Vac_exp == some_numbers / normalisation).all()
     assert result is not vev_df
 
 
@@ -239,4 +239,4 @@ def test_normalize_vevs_inplace(vev_df: pd.DataFrame, some_numbers: list[int]) -
     normalisation = (num_configs * lattice_temporal_extent) ** 0.5
     result = _normalise_vevs(vev_df, num_configs, lattice_temporal_extent, inplace=True)
     assert result is None
-    assert (vev_df.Vac_exp == [num / normalisation for num in some_numbers]).all()
+    assert (vev_df.Vac_exp == some_numbers / normalisation).all()
