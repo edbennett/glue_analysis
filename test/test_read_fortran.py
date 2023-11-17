@@ -193,3 +193,18 @@ def test_read_correlators_fortran_rejects_bad_cfg_count(
         match="Number of configurations.*is not divisible by number of samples .*",
     ):
         _read_correlators_fortran(full_file, filename, metadata={"num_configs": 13})
+
+
+@pytest.mark.parametrize("metadata", [{}, {"num_configs": 200}, {"NT": 24}])
+def test_read_correlators_fortran_rejects_vevs_with_missing_metadata(
+    full_file: TextIO,
+    filename: str,
+    vev_file: TextIO,
+    metadata: dict[str, Any],
+) -> None:
+    with pytest.raises(
+        ValueError, match=".*must be specified to normalise VEVs correctly."
+    ):
+        _read_correlators_fortran(
+            full_file, filename, vev_file=vev_file, metadata=metadata
+        )
