@@ -7,6 +7,7 @@ from typing import Any, TextIO
 import numpy as np
 import pytest
 
+from glue_analysis.correlator import CorrelatorData, VEVData
 from glue_analysis.readers.read_fortran import _read_correlators_fortran
 
 
@@ -130,14 +131,7 @@ def test_read_correlators_fortran_correctly_names_columns(
     full_file: TextIO, filename: str
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert set(answer.correlators.columns) == {
-        "MC_Time",
-        "Time",
-        "Internal1",
-        "Internal2",
-        "Correlation",
-        "channel",
-    }
+    assert set(answer.correlators.columns) == {*CorrelatorData.columns, "channel"}
 
 
 def test_read_correlators_fortran_correctly_names_vev_columns(
@@ -149,7 +143,7 @@ def test_read_correlators_fortran_correctly_names_vev_columns(
     answer = _read_correlators_fortran(
         full_file, filename, vev_file=vev_file, metadata=vev_metadata
     )
-    assert set(answer.vevs.columns) == {"MC_Time", "Internal", "Vac_exp", "channel"}
+    assert set(answer.vevs.columns) == {*VEVData.columns, "channel"}
 
 
 def test_read_correlators_fortran_preserves_data(
