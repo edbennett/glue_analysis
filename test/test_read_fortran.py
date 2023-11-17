@@ -30,9 +30,10 @@ def vev_columns() -> list[str]:
     return ["Bin_index", "Op_index", "Vac_exp"]
 
 
-@pytest.fixture()
-def vev_metadata() -> dict[str, Any]:
-    return {"NT": 24, "num_configs": 200}
+@pytest.fixture(params=[(24, 200), (36, 4000), (48, 2400)])
+def vev_metadata(request) -> dict[str, Any]:  # noqa: ANN001
+    lattice_temporal_extent, num_configs = request.param
+    return {"NT": lattice_temporal_extent, "num_configs": num_configs}
 
 
 def create_data(columns: list[str]) -> np.array:
