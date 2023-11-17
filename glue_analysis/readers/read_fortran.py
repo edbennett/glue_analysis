@@ -59,8 +59,17 @@ def _read_single_file(file_to_read: TextIO) -> pd.DataFrame:
     )
 
 
-def _normalise_vevs(vevs: pd.DataFrame, NT: int, num_configs: int) -> None:
+def _normalise_vevs(
+    vevs: pd.DataFrame, NT: int, num_configs: int, *, inplace: bool = False
+) -> None | pd.DataFrame:
+    if not inplace:
+        vevs = vevs.copy()
+
     vevs["Vac_exp"] /= (NT * num_configs / len(set(vevs.MC_Time))) ** 0.5
+    if not inplace:
+        return vevs
+
+    return None
 
 
 def _check_ensemble_divisibility(num_configs: int | None, num_samples: int) -> None:
@@ -94,7 +103,12 @@ def _read_correlators_fortran(
     if vev_file:
         correlators.vevs = _read_single_file(vev_file)
         correlators.vevs["channel"] = channel
-        _normalise_vevs(correlators.vevs, metadata["NT"], metadata["num_configs"])
+        _normalise_vevs(
+            correlators.vevs,
+            metadata["NT"],
+            metadata["num_configs"],
+            inplace=True,  # noqa: PD002
+        )
 
     correlators.metadata = metadata
 
