@@ -106,7 +106,7 @@ def _read_correlators_fortran(
             correlators.vevs,
             metadata["NT"],
             metadata["num_configs"],
-            inplace=True,  # noqa: PD002
+            inplace=True,
         )
 
     correlators.metadata = metadata
