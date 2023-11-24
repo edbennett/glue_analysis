@@ -28,49 +28,21 @@ def header() -> dict[str, int]:
 
 def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.DataFrame:
     index_ranges = [
-        range(1, header["Nbin"] + 1),  # Bin_index
-        range(1, header["Nbl"] + 1),  # Blocking_index1
-        range(1, header["Nop"] + 1),  # Op_index1
+        range(1, header["Nbin"] + 1),
+        range(1, header["Nop"] * header["Nbl"] + 1),
     ]
     if not vev:
         index_ranges += [
-            range(1, header["Nbl"] + 1),  # Blocking_index2
-            range(1, header["Nop"] + 1),  # Op_index2
-            range(1, int(header["LT"] / 2 + 1) + 1),  # Time
+            range(1, header["Nop"] * header["Nbl"] + 1),
+            range(1, int(header["LT"] / 2 + 1) + 1),
         ]
-    ungrouped_columns = (
+    return (
         pd.MultiIndex.from_product(
             index_ranges,
             names=VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS,
         )
         .to_frame()
         .reset_index(drop=True)
-    )
-    if vev:
-        assignments = {
-            "Internal": list(
-                ungrouped_columns[["Internal", "Blocking_index"]].itertuples(
-                    index=False
-                )
-            )
-        }
-    else:
-        assignments = {
-            "Internal1": list(
-                ungrouped_columns[["Internal1", "Blocking_index1"]].itertuples(
-                    index=False
-                )
-            ),
-            "Internal2": list(
-                ungrouped_columns[["Internal2", "Blocking_index2"]].itertuples(
-                    index=False
-                )
-            ),
-        }
-    return ungrouped_columns.assign(**assignments).drop(
-        ["Blocking_index", "Blocking_index1", "Blocking_index2"],
-        errors="ignore",
-        axis="columns",
     )
 
 
