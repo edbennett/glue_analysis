@@ -155,16 +155,10 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
 
 
 def _columns_from_header(header: dict[str, int], columns: list[str]) -> pd.DataFrame:
-    return (
-        pd.MultiIndex.from_product(
-            [
-                range(
-                    1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1
-                )
-                for column in columns
-            ],
-            names=columns,
-        )
-        .to_frame()
-        .reset_index(drop=True)
-    )
+    return pd.MultiIndex.from_product(
+        [
+            range(1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1)
+            for column in columns
+        ],
+        names=columns,
+    ).to_frame(index=False)
