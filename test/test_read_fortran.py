@@ -147,7 +147,10 @@ def test_read_correlators_fortran_correctly_names_columns(
     full_file: TextIO, filename: str
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert set(answer.correlators.columns) == {*CorrelatorData.columns, "channel"}
+    assert set(answer.correlators.index.names) == {
+        *CorrelatorData.index.get_metadata()[None]["columns"]
+    }
+    assert set(answer.correlators.columns) == {"Correlation", "channel"}
 
 
 def test_read_correlators_fortran_correctly_names_vev_columns(
@@ -159,7 +162,10 @@ def test_read_correlators_fortran_correctly_names_vev_columns(
     answer = _read_correlators_fortran(
         full_file, filename, vev_file=vev_file, metadata=vev_metadata
     )
-    assert set(answer.vevs.columns) == {*VEVData.columns, "channel"}
+    assert set(answer.vevs.index.names) == {
+        *VEVData.index.get_metadata()[None]["columns"]
+    }
+    assert set(answer.vevs.columns) == {"Vac_exp", "channel"}
 
 
 def test_read_correlators_fortran_preserves_data(

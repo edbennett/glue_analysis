@@ -92,22 +92,25 @@ class DataInconsistencyError(Exception):
 def cross_validate(
     corr: DataFrameType[CorrelatorData], vevs: DataFrameType[VEVData]
 ) -> None:
-    vevs = vevs.index.to_frame(index=False)
-    if not (
-        # It's sufficient to check this one way round (and not with Internal1/2
-        # interchanged) because their consistency is assured from other checks.
-        corr.index.to_frame(index=False)
-        .groupby(by=["Internal2", "Time"])
-        .apply(
-            lambda df: sorted(df[["MC_Time", "Internal1"]].to_numpy().tolist())
-            == sorted(vevs[["MC_Time", "Internal"]].to_numpy().tolist())
-        )
-    ).all():
-        message = (
-            "VEVs and correlators have differing MC_Time and Internal axes. "
-            "Are they coming from the same ensemble?"
-        )
-        raise DataInconsistencyError(message)
+    vevs_idx = vevs.index.sort_values()
+    try:
+        if not (
+            # It's sufficient to check this one way round (and not with Internal1/2
+            # interchanged) because their consistency is assured from other checks.
+            corr.groupby(by=["Internal2", "Time"]).apply(
+                lambda df: (
+                    df.index.droplevel(["Internal2", "Time"]).sort_values() == vevs_idx
+                ).all()
+            )
+        ).all():
+            message = (
+                "VEVs and correlators have differing MC_Time and Internal axes. "
+                "Are they coming from the same ensemble?"
+            )
+            raise DataInconsistencyError(message)
+    except ValueError as ex:
+        message = "Vevs and correlators are of different length."
+        raise DataInconsistencyError(message) from ex
 
 
 class CorrelatorEnsemble:

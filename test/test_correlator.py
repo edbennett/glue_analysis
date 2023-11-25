@@ -496,6 +496,23 @@ def test_correlator_ensemble_fails_if_indexing_rows_are_not_unique_vevs(
         unfrozen_corr_ensemble.freeze()
 
 
+def test_correlator_ensemble_fails_if_vevs_and_correlators_with_different_length_index(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.vevs = (
+        unfrozen_corr_ensemble.vevs.droplevel("MC_Time")
+        .assign(MC_Time=-1)
+        .set_index("MC_Time", append=True)
+    )  # different from correlators
+    unfrozen_corr_ensemble.vevs = (
+        unfrozen_corr_ensemble.vevs.reset_index(drop=False)
+        .drop_duplicates(subset=["MC_Time", "Internal"], keep="first")
+        .set_index(["MC_Time", "Internal"])
+    )
+    with pytest.raises(DataInconsistencyError):
+        unfrozen_corr_ensemble.freeze()
+
+
 def test_correlator_ensemble_fails_if_vevs_and_correlators_with_different_index(
     unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
@@ -509,5 +526,8 @@ def test_correlator_ensemble_fails_if_vevs_and_correlators_with_different_index(
         .drop_duplicates(subset=["MC_Time", "Internal"], keep="first")
         .set_index(["MC_Time", "Internal"])
     )
+    unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.loc(axis=0)[
+        1, ...
+    ]
     with pytest.raises(DataInconsistencyError):
         unfrozen_corr_ensemble.freeze()
