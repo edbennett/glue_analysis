@@ -28,63 +28,48 @@ _CHECK_DESCRIPTIONS = {
     #
     "Check_Internals_equal": "Internal1 and Internal2 are supposed to form"
     "square matrix, so they must be identical up to reordering.",
-    #
-    "Check_unique_indexing": "The index columns are supposed "
-    "to make for a unique index.",
 }
 CorrelatorData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(
-            int, required=True, description=_COLUMN_DESCRIPTIONS["MC_Time"]
-        ),
-        "Time": pa.Column(int, required=True, description=_COLUMN_DESCRIPTIONS["Time"]),
-        "Internal1": pa.Column(
-            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
-        ),
-        "Internal2": pa.Column(
-            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
-        ),
         "Correlation": pa.Column(
             float, required=True, description=_COLUMN_DESCRIPTIONS["Correlation"]
         ),
     },
+    index=pa.MultiIndex(
+        [
+            pa.Index(int, description=_COLUMN_DESCRIPTIONS["MC_Time"], name="MC_Time"),
+            pa.Index(description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal1"),
+            pa.Index(description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal2"),
+            pa.Index(int, description=_COLUMN_DESCRIPTIONS["Time"], name="Time"),
+        ],
+        strict=True,
+        unique=["MC_Time", "Internal1", "Internal2", "Time"],
+    ),
     checks=[
         pa.Check(
             lambda df: (
-                df["Internal1"].sort_values().to_numpy()
-                == df["Internal2"].sort_values().to_numpy()
+                df.index.get_level_values("Internal1").sort_values()
+                == df.index.get_level_values("Internal2").sort_values()
             ).all(),
             description=_CHECK_DESCRIPTIONS["Check_Internals_equal"],
             name="Check_Internals_equal",
-        ),
-        pa.Check(
-            lambda df: not df[["MC_Time", "Time", "Internal1", "Internal2"]]
-            .duplicated()
-            .any(),
-            description=_CHECK_DESCRIPTIONS["Check_unique_indexing"],
-            name="Check_unique_indexing",
         ),
     ],
 )
 VEVData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(
-            int, required=True, description=_COLUMN_DESCRIPTIONS["MC_Time"]
-        ),
-        "Internal": pa.Column(
-            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
-        ),
         "Vac_exp": pa.Column(
             float, required=True, description=_COLUMN_DESCRIPTIONS["Vac_exp"]
         ),
     },
-    checks=[
-        pa.Check(
-            lambda df: not df[["MC_Time", "Internal"]].duplicated().any(),
-            description=_CHECK_DESCRIPTIONS["Check_unique_indexing"],
-            name="Check_unique_indexing",
-        ),
-    ],
+    index=pa.MultiIndex(
+        [
+            pa.Index(int, description=_COLUMN_DESCRIPTIONS["MC_Time"], name="MC_Time"),
+            pa.Index(description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal"),
+        ],
+        strict=True,
+        unique=["MC_Time", "Internal"],
+    ),
 )
 
 
@@ -99,10 +84,13 @@ class DataInconsistencyError(Exception):
 def cross_validate(
     corr: DataFrameType[CorrelatorData], vevs: DataFrameType[VEVData]
 ) -> None:
+    vevs = vevs.index.to_frame(index=False)
     if not (
         # It's sufficient to check this one way round (and not with Internal1/2
         # interchanged) because their consistency is assured from other checks.
-        corr.groupby(by=["Time", "Internal2"]).apply(
+        corr.index.to_frame(index=False)
+        .groupby(by=["Internal2", "Time"])
+        .apply(
             lambda df: sorted(df[["MC_Time", "Internal1"]].to_numpy().tolist())
             == sorted(vevs[["MC_Time", "Internal"]].to_numpy().tolist())
         )

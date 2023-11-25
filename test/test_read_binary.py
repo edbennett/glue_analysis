@@ -177,11 +177,7 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_
     answer = _read_correlators_binary(
         corr_file, filename, vev_file=create_file(header, vev_data)
     )
-    assert (
-        (answer.vevs[["MC_Time", "Internal"]] == columns_from_header(header, vev=True))
-        .all()
-        .all()
-    )
+    assert (answer.vevs.index == columns_from_header(header, vev=True)).all().all()
 
 
 def test_read_correlators_binary_preserves_data_in_vev(
@@ -209,11 +205,8 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
-    columns = ["MC_Time", "Time", "Internal1", "Internal2"]
     assert (
-        (answer.correlators[columns] == columns_from_header(header, vev=False)[columns])
-        .all()
-        .all()
+        (answer.correlators.index == columns_from_header(header, vev=False)).all().all()
     )
 
 
