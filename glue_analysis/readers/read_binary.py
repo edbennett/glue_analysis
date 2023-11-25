@@ -73,13 +73,17 @@ def _read(
     file: BinaryIO,
     # could be more precise, i.e., only indexing portion of
     # DataFrameType[CorrelatorData | VEVData]:
-    correlators: pd.DataFrame,
+    index: pd.DataFrame,
     value_column_name: str,
 ) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
-    correlators[value_column_name] = (
-        # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
-        np.frombuffer(file.read(), dtype=np.float64)
+    correlators = pd.DataFrame(
+        {
+            value_column_name:
+            # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
+            np.frombuffer(file.read(), dtype=np.float64)
+        },
+        index=index,
     )
     file.seek(0)
     return correlators
@@ -133,4 +137,4 @@ def _columns_from_header(header: dict[str, int], columns: list[str]) -> pd.DataF
             for column in columns
         ],
         names=columns,
-    ).to_frame(index=False)
+    )

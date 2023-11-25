@@ -36,13 +36,9 @@ def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.Data
             range(1, header["Nop"] * header["Nbl"] + 1),
             range(1, int(header["LT"] / 2 + 1) + 1),
         ]
-    return (
-        pd.MultiIndex.from_product(
-            index_ranges,
-            names=VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS,
-        )
-        .to_frame()
-        .reset_index(drop=True)
+    return pd.MultiIndex.from_product(
+        index_ranges,
+        names=VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS,
     )
 
 
