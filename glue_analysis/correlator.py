@@ -152,7 +152,7 @@ class CorrelatorEnsemble:
             if "Columns with duplicate values are not supported in stack" in str(ex):
                 # see https://github.com/unionai-oss/pandera/issues/1328
                 raise ValueError(message) from ex
-            raise
+            raise  # pragma: no cover
         if hasattr(self, "_vevs"):
             try:
                 VEVData.validate(self._vevs)
@@ -162,7 +162,7 @@ class CorrelatorEnsemble:
                 ):
                     # see https://github.com/unionai-oss/pandera/issues/1328
                     raise ValueError(message) from ex
-                raise
+                raise  # pragma: no cover
             cross_validate(self._correlators, self._vevs)
         self._frozen = True
         return self

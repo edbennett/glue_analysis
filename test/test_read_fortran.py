@@ -58,7 +58,9 @@ def some_numbers() -> np.ndarray:
 
 @pytest.fixture()
 def vev_df(some_numbers: np.ndarray) -> pd.DataFrame:
-    return pd.DataFrame({"MC_Time": [1, 1, 1, 1, 1], "Vac_exp": some_numbers})
+    return pd.DataFrame(
+        {"MC_Time": [1, 1, 1, 1, 1], "Vac_exp": some_numbers}
+    ).set_index("MC_Time", append=False)
 
 
 @pytest.fixture()
@@ -164,7 +166,9 @@ def test_read_correlators_fortran_preserves_data(
     full_file: TextIO, filename: str, data: np.array
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert (answer.correlators.drop("channel", axis=1).to_numpy() == data).all()
+    assert (
+        answer.correlators.drop("channel", axis=1).to_numpy().reshape(-1) == data[:, -1]
+    ).all()
 
 
 def test_read_correlators_fortran_preserves_normalised_data_in_vev(
@@ -190,7 +194,8 @@ def test_read_correlators_fortran_preserves_normalised_data_in_vev(
     normalised_vev_data[:, -1] /= normalisation
 
     assert (
-        answer.vevs.drop("channel", axis="columns").to_numpy() == normalised_vev_data
+        answer.vevs.drop("channel", axis="columns").to_numpy().reshape(-1)
+        == normalised_vev_data[:, -1]
     ).all()
 
 

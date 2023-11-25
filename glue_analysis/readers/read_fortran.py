@@ -7,7 +7,7 @@ from typing import Any, TextIO
 
 import pandas as pd
 
-from glue_analysis.correlator import CorrelatorEnsemble
+from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
 
 
 @lru_cache(maxsize=8)
@@ -64,7 +64,7 @@ def _normalise_vevs(
     if not inplace:
         vevs = vevs.copy()
 
-    vevs["Vac_exp"] /= (NT * num_configs / len(set(vevs.MC_Time))) ** 0.5
+    vevs["Vac_exp"] /= (NT * num_configs / len(vevs.index.unique("MC_Time"))) ** 0.5
     if not inplace:
         return vevs
 
@@ -94,13 +94,17 @@ def _read_correlators_fortran(
         raise ValueError(message)
 
     correlators = CorrelatorEnsemble(filename)
-    correlators.correlators = _read_single_file(corr_file)
+    correlators.correlators = _read_single_file(corr_file).set_index(
+        list(CorrelatorData.index.get_metadata()[None]["columns"].keys()), append=False
+    )
     correlators.correlators["channel"] = channel
 
     _check_ensemble_divisibility(metadata.get("num_configs"), correlators.num_samples)
 
     if vev_file:
-        correlators.vevs = _read_single_file(vev_file)
+        correlators.vevs = _read_single_file(vev_file).set_index(
+            list(VEVData.index.get_metadata()[None]["columns"].keys()), append=False
+        )
         correlators.vevs["channel"] = channel
         _normalise_vevs(
             correlators.vevs,
