@@ -38,11 +38,16 @@ CorrelatorData = pa.DataFrameSchema(
     index=pa.MultiIndex(
         [
             pa.Index(int, description=_COLUMN_DESCRIPTIONS["MC_Time"], name="MC_Time"),
-            pa.Index(description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal1"),
-            pa.Index(description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal2"),
+            pa.Index(
+                int, description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal1"
+            ),
+            pa.Index(
+                int, description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal2"
+            ),
             pa.Index(int, description=_COLUMN_DESCRIPTIONS["Time"], name="Time"),
         ],
         strict=True,
+        ordered=False,
         unique=["MC_Time", "Internal1", "Internal2", "Time"],
     ),
     checks=[
@@ -65,9 +70,12 @@ VEVData = pa.DataFrameSchema(
     index=pa.MultiIndex(
         [
             pa.Index(int, description=_COLUMN_DESCRIPTIONS["MC_Time"], name="MC_Time"),
-            pa.Index(description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal"),
+            pa.Index(
+                int, description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal"
+            ),
         ],
         strict=True,
+        ordered=False,
         unique=["MC_Time", "Internal"],
     ),
 )
@@ -133,9 +141,28 @@ class CorrelatorEnsemble:
             )
             raise TypeError(message)
 
-        CorrelatorData.validate(self._correlators)
+        message = (
+            "Non-unique index, "
+            "should be pa.errors.SchemaError "
+            "but fails due to some incompatibility."
+        )
+        try:
+            CorrelatorData.validate(self._correlators)
+        except ValueError as ex:
+            if "Columns with duplicate values are not supported in stack" in str(ex):
+                # see https://github.com/unionai-oss/pandera/issues/1328
+                raise ValueError(message) from ex
+            raise
         if hasattr(self, "_vevs"):
-            VEVData.validate(self._vevs)
+            try:
+                VEVData.validate(self._vevs)
+            except ValueError as ex:
+                if "Columns with duplicate values are not supported in stack" in str(
+                    ex
+                ):
+                    # see https://github.com/unionai-oss/pandera/issues/1328
+                    raise ValueError(message) from ex
+                raise
             cross_validate(self._correlators, self._vevs)
         self._frozen = True
         return self
@@ -179,15 +206,15 @@ class CorrelatorEnsemble:
 
     @property
     def num_timeslices(self: Self) -> int:
-        return len(set(self._correlators.Time))
+        return len(self._correlators.index.unique("Time"))
 
     @property
     def num_internal(self: Self) -> int:
-        return len(set(self._correlators.Internal1))
+        return len(self._correlators.index.unique("Internal1"))
 
     @property
     def num_samples(self: Self) -> int:
-        return len(set(self._correlators.MC_Time))
+        return len(self._correlators.index.unique("MC_Time"))
 
     def get_numpy(self: Self) -> np.array:
         sorted_correlators = self._correlators.sort_values(
