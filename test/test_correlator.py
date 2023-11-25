@@ -28,8 +28,9 @@ MC_TIME_AXIS = 0
 
 @pytest.fixture()
 def corr_data() -> CorrelatorData:
-    return (
-        pd.MultiIndex.from_product(
+    return pd.DataFrame(
+        {"Correlation": np.arange(CORRELATOR_DATA_LENGTH, dtype=float)},
+        index=pd.MultiIndex.from_product(
             [
                 range(1, LENGTH_MC_TIME + 1),
                 range(1, LENGTH_TIME + 1),
@@ -37,10 +38,7 @@ def corr_data() -> CorrelatorData:
                 range(1, LENGTH_INTERNAL + 1),
             ],
             names=["MC_Time", "Time", "Internal1", "Internal2"],
-        )
-        .to_frame()
-        .reset_index(drop=True)
-        .assign(Correlation=np.arange(CORRELATOR_DATA_LENGTH, dtype=float))
+        ),
     )
 
 
