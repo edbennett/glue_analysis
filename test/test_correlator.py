@@ -531,3 +531,23 @@ def test_correlator_ensemble_fails_if_vevs_and_correlators_with_different_index(
     ]
     with pytest.raises(DataInconsistencyError):
         unfrozen_corr_ensemble.freeze()
+
+
+def test_correlator_ensemble_can_freeze_without_validation(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.correlators = pd.DataFrame(
+        ["rubbish that would fail validation"]
+    )
+    unfrozen_corr_ensemble.freeze(perform_expensive_validation=False)
+    # Let's check this despite the fact that reaching this line without an
+    # exception raised likely means we've done it:
+    assert unfrozen_corr_ensemble.frozen
+
+
+def test_correlator_ensemble_freezing_without_validation_still_performs_typecheck(
+    unfrozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    unfrozen_corr_ensemble.correlators = "rubbish that would fail validation"
+    with pytest.raises(TypeError):
+        unfrozen_corr_ensemble.freeze(perform_expensive_validation=False)
