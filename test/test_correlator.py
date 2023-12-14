@@ -183,7 +183,7 @@ def test_correlator_ensemble_returns_correct_numpy_data(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert (
-        frozen_corr_ensemble.get_numpy().reshape(-1)
+        frozen_corr_ensemble.get_numpy().ravel()
         == frozen_corr_ensemble.correlators["Correlation"].to_numpy()
     ).all()
 
@@ -195,7 +195,7 @@ def test_correlator_ensemble_returns_sorted_numpy_data(
     unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.sample(
         frac=1
     )
-    assert (unfrozen_corr_ensemble.freeze().get_numpy().reshape(-1) == expected).all()
+    assert (unfrozen_corr_ensemble.freeze().get_numpy().ravel() == expected).all()
 
 
 def test_correlator_ensemble_returns_correctly_shaped_numpy_vevs(
@@ -211,7 +211,7 @@ def test_correlator_ensemble_returns_correct_numpy_data_for_vevs(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     assert (
-        frozen_corr_ensemble.get_numpy_vevs().reshape(-1)
+        frozen_corr_ensemble.get_numpy_vevs().ravel()
         == frozen_corr_ensemble.vevs["Vac_exp"].to_numpy()
     ).all()
 
@@ -221,9 +221,7 @@ def test_correlator_ensemble_returns_sorted_numpy_data_for_vevs(
 ) -> None:
     expected = unfrozen_corr_ensemble.vevs["Vac_exp"].to_numpy()
     unfrozen_corr_ensemble.vevs = unfrozen_corr_ensemble.vevs.sample(frac=1)
-    assert (
-        unfrozen_corr_ensemble.freeze().get_numpy_vevs().reshape(-1) == expected
-    ).all()
+    assert (unfrozen_corr_ensemble.freeze().get_numpy_vevs().ravel() == expected).all()
 
 
 def test_correlator_ensemble_raises_for_subtract_without_vevs_present(

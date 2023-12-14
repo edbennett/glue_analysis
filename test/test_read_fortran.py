@@ -173,7 +173,7 @@ def test_read_correlators_fortran_preserves_data(
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
     assert (
-        answer.correlators.drop("channel", axis=1).to_numpy().reshape(-1) == data[:, -1]
+        answer.correlators.drop("channel", axis=1).to_numpy().ravel() == data[:, -1]
     ).all()
 
 
@@ -200,7 +200,7 @@ def test_read_correlators_fortran_preserves_normalised_data_in_vev(
     normalised_vev_data[:, -1] /= normalisation
 
     assert (
-        answer.vevs.drop("channel", axis="columns").to_numpy().reshape(-1)
+        answer.vevs.drop("channel", axis="columns").to_numpy().ravel()
         == normalised_vev_data[:, -1]
     ).all()
 
