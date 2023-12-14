@@ -67,13 +67,6 @@ def _read_correlators_binary(
             VEV_VALUE_COLUMN_NAME,
         )
 
-    # Adding `perform_expensive_validation=False` is untested because
-    # 1) it is internal behaviour that should not matter to the caller
-    # 2) I can't think of a way to make a failing test here (which is probably a
-    #    very good sign concerning the safety of the modification itself)
-    # 3) Any way to test this I can come up with involves messing with ugly
-    #    mocks or the like and I think it would neither improve code quality nor
-    #    mental health of the author to do so.
     return correlators.freeze(perform_expensive_validation=False)
 
 
