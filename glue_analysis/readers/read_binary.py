@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -32,6 +33,7 @@ class ParsingError(Exception):
     pass
 
 
+@lru_cache(maxsize=8)
 def read_correlators_binary(
     corr_filename: str,
     vev_filename: str | None = None,
