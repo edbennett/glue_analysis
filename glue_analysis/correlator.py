@@ -113,6 +113,21 @@ def cross_validate(
         raise DataInconsistencyError(message) from ex
 
 
+def validate(schema: pa.DataFrameSchema, data: DataFrameType) -> None:
+    message = (
+        "Non-unique index, "
+        "should be pa.errors.SchemaError but fails due to some incompatibility."
+    )
+    try:
+        schema.validate(data)
+    except ValueError as ex:
+        if "Columns with duplicate values are not supported" in str(ex):
+            # see https://github.com/unionai-oss/pandera/issues/1328
+            raise ValueError(message) from ex
+        # if this happens, it's an exceptional situation we can't test:
+        raise  # pragma: no cover
+
+
 class CorrelatorEnsemble:
     """
     Represents a full ensemble of gluonic correlation functions.
@@ -145,25 +160,9 @@ class CorrelatorEnsemble:
             raise TypeError(message)
 
     def _data_validation(self: Self) -> None:
-        message = (
-            "Non-unique index, "
-            "should be pa.errors.SchemaError but fails due to some incompatibility."
-        )
-        try:
-            CorrelatorData.validate(self._correlators)
-        except ValueError as ex:
-            if "Columns with duplicate values are not supported" in str(ex):
-                # see https://github.com/unionai-oss/pandera/issues/1328
-                raise ValueError(message) from ex
-            raise  # pragma: no cover
+        validate(CorrelatorData, self._correlators)
         if hasattr(self, "_vevs"):
-            try:
-                VEVData.validate(self._vevs)
-            except ValueError as ex:
-                if "Columns with duplicate values are not supported" in str(ex):
-                    # see https://github.com/unionai-oss/pandera/issues/1328
-                    raise ValueError(message) from ex
-                raise  # pragma: no cover
+            validate(VEVData, self._vevs)
             cross_validate(self._correlators, self._vevs)
 
     def freeze(self: Self, *, perform_expensive_validation: bool = True) -> Self:
