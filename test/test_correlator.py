@@ -498,15 +498,12 @@ def test_correlator_ensemble_fails_if_vevs_and_correlators_with_different_length
     unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     unfrozen_corr_ensemble.vevs = (
-        unfrozen_corr_ensemble.vevs.droplevel("MC_Time")
-        .assign(MC_Time=-1)
-        .set_index("MC_Time", append=True)
-    )  # different from correlators
-    unfrozen_corr_ensemble.vevs = (
         unfrozen_corr_ensemble.vevs.reset_index(drop=False)
+        .assign(MC_Time=-1)
         .drop_duplicates(subset=["MC_Time", "Internal"], keep="first")
         .set_index(["MC_Time", "Internal"])
     )
+    # now vevs is shorter (but still has a consistent index not triggering other checks)
     with pytest.raises(DataInconsistencyError):
         unfrozen_corr_ensemble.freeze()
 
@@ -515,18 +512,14 @@ def test_correlator_ensemble_fails_if_vevs_and_correlators_with_different_index(
     unfrozen_corr_ensemble: CorrelatorEnsemble,
 ) -> None:
     unfrozen_corr_ensemble.vevs = (
-        unfrozen_corr_ensemble.vevs.droplevel("MC_Time")
-        .assign(MC_Time=-1)
-        .set_index("MC_Time", append=True)
-    )  # different from correlators
-    unfrozen_corr_ensemble.vevs = (
         unfrozen_corr_ensemble.vevs.reset_index(drop=False)
+        .assign(MC_Time=-1)
         .drop_duplicates(subset=["MC_Time", "Internal"], keep="first")
         .set_index(["MC_Time", "Internal"])
-    )
+    )  # now MC_Time is different from any corresponding values in correlators
     unfrozen_corr_ensemble.correlators = unfrozen_corr_ensemble.correlators.loc(axis=0)[
         1, ...
-    ]
+    ]  # now correlators has the same length as vevs
     with pytest.raises(DataInconsistencyError):
         unfrozen_corr_ensemble.freeze()
 
