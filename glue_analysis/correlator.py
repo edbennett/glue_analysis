@@ -129,7 +129,7 @@ class CorrelatorEnsemble:
         self.filename = filename
         self.ensemble_name = ensemble_name if ensemble_name else "glue_bins"
 
-    def freeze(self: Self, *, perform_expensive_validation: bool = True) -> Self:
+    def _type_validation(self: Self) -> None:
         if not isinstance(self._correlators, pd.DataFrame):
             message = (
                 "Correlator data is expected to be pandas.Dataframe "
@@ -144,33 +144,32 @@ class CorrelatorEnsemble:
             )
             raise TypeError(message)
 
-        if perform_expensive_validation:
-            message = (
-                "Non-unique index, "
-                "should be pa.errors.SchemaError "
-                "but fails due to some incompatibility."
-            )
+    def _data_validation(self: Self) -> None:
+        message = (
+            "Non-unique index, "
+            "should be pa.errors.SchemaError but fails due to some incompatibility."
+        )
+        try:
+            CorrelatorData.validate(self._correlators)
+        except ValueError as ex:
+            if "Columns with duplicate values are not supported" in str(ex):
+                # see https://github.com/unionai-oss/pandera/issues/1328
+                raise ValueError(message) from ex
+            raise  # pragma: no cover
+        if hasattr(self, "_vevs"):
             try:
-                CorrelatorData.validate(self._correlators)
+                VEVData.validate(self._vevs)
             except ValueError as ex:
-                if "Columns with duplicate values are not supported in stack" in str(
-                    ex
-                ):
+                if "Columns with duplicate values are not supported" in str(ex):
                     # see https://github.com/unionai-oss/pandera/issues/1328
                     raise ValueError(message) from ex
                 raise  # pragma: no cover
-            if hasattr(self, "_vevs"):
-                try:
-                    VEVData.validate(self._vevs)
-                except ValueError as ex:
-                    if (
-                        "Columns with duplicate values are not supported in stack"
-                        in str(ex)
-                    ):
-                        # see https://github.com/unionai-oss/pandera/issues/1328
-                        raise ValueError(message) from ex
-                    raise  # pragma: no cover
-                cross_validate(self._correlators, self._vevs)
+            cross_validate(self._correlators, self._vevs)
+
+    def freeze(self: Self, *, perform_expensive_validation: bool = True) -> Self:
+        self._type_validation()
+        if perform_expensive_validation:
+            self._data_validation()
         self._frozen = True
         return self
 
