@@ -74,7 +74,7 @@ def _read(
     file: BinaryIO,
     # could be more precise, i.e., only indexing portion of
     # DataFrameType[CorrelatorData | VEVData]:
-    index: pd.DataFrame,
+    index: pd.MultiIndex,
     value_column_name: str,
 ) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
@@ -131,7 +131,7 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
     return header
 
 
-def _columns_from_header(header: dict[str, int], columns: list[str]) -> pd.DataFrame:
+def _columns_from_header(header: dict[str, int], columns: list[str]) -> pd.MultiIndex:
     return pd.MultiIndex.from_product(
         [
             range(1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1)
