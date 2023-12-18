@@ -5,6 +5,7 @@ from typing import Any, BinaryIO
 import numpy as np
 import pandas as pd
 
+from glue_analysis.auxiliary import NUMBERS
 from glue_analysis.correlator import CorrelatorEnsemble
 
 LENGTH_OF_CORRELATOR_INDEXING = {
@@ -19,7 +20,6 @@ CORRELATOR_INDEXING_COLUMNS = [
     "Internal2",
     "Time",
 ]
-NUMBERS = "0123456789"
 CORRELATOR_VALUE_COLUMN_NAME = "Correlation"
 VEV_VALUE_COLUMN_NAME = "Vac_exp"
 VEV_INDEXING_COLUMNS = ["MC_Time", "Internal"]

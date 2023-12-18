@@ -8,6 +8,8 @@ import pandera as pa
 import pyerrors as pe
 from pandera.typing import DataFrame as DataFrameType
 
+from glue_analysis.auxiliary import NUMBERS
+
 _COLUMN_DESCRIPTIONS = {
     #
     "MC_Time": "Index enumerating the Monte Carlo samples.",
@@ -37,14 +39,12 @@ CorrelatorData = pa.DataFrameSchema(
     },
     index=pa.MultiIndex(
         [
-            pa.Index(int, description=_COLUMN_DESCRIPTIONS["MC_Time"], name="MC_Time"),
             pa.Index(
-                int, description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal1"
-            ),
-            pa.Index(
-                int, description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal2"
-            ),
-            pa.Index(int, description=_COLUMN_DESCRIPTIONS["Time"], name="Time"),
+                int,
+                description=_COLUMN_DESCRIPTIONS[column.strip(NUMBERS)],
+                name=column,
+            )
+            for column in ("MC_Time", "Internal1", "Internal2", "Time")
         ],
         strict=True,
         ordered=False,
@@ -69,10 +69,8 @@ VEVData = pa.DataFrameSchema(
     },
     index=pa.MultiIndex(
         [
-            pa.Index(int, description=_COLUMN_DESCRIPTIONS["MC_Time"], name="MC_Time"),
-            pa.Index(
-                int, description=_COLUMN_DESCRIPTIONS["Internal"], name="Internal"
-            ),
+            pa.Index(int, description=_COLUMN_DESCRIPTIONS[column], name=column)
+            for column in ("MC_Time", "Internal")
         ],
         strict=True,
         ordered=False,
