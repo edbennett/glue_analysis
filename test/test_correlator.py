@@ -472,8 +472,7 @@ def test_correlator_ensemble_fails_if_indexing_rows_are_not_unique(
     unfrozen_corr_ensemble.correlators.index = pd.MultiIndex.from_frame(idx)
     message = (
         "Non-unique index, "
-        "should be pa.errors.SchemaError "
-        "but fails due to some incompatibility."
+        "should be pa.errors.SchemaError but fails due to some incompatibility."
     )
     with pytest.raises(ValueError, match=message):
         unfrozen_corr_ensemble.freeze()
@@ -487,8 +486,7 @@ def test_correlator_ensemble_fails_if_indexing_rows_are_not_unique_vevs(
     unfrozen_corr_ensemble.vevs.index = pd.MultiIndex.from_frame(idx)
     message = (
         "Non-unique index, "
-        "should be pa.errors.SchemaError "
-        "but fails due to some incompatibility."
+        "should be pa.errors.SchemaError but fails due to some incompatibility."
     )
     with pytest.raises(ValueError, match=message):
         unfrozen_corr_ensemble.freeze()
