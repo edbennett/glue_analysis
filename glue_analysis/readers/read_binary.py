@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -32,19 +34,21 @@ class ParsingError(Exception):
     pass
 
 
+@contextmanager
+def NoneContext() -> Generator[None, None, None]:
+    yield
+
+
 def read_correlators_binary(
     corr_filename: str,
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
-    with Path(corr_filename).open("rb") as corr_file:
-        if vev_filename:
-            with Path(vev_filename).open("rb") as vev_file:
-                return _read_correlators_binary(
-                    corr_file, corr_filename, vev_file, metadata
-                )
-
-        return _read_correlators_binary(corr_file, corr_filename, None, metadata)
+    with Path(corr_filename).open("rb") as corr_file, (
+        # typechecking fails on @contextmanager
+        Path(vev_filename).open("rb") if vev_filename else NoneContext()  # type: ignore[attr-defined]
+    ) as vev_file:
+        return _read_correlators_binary(corr_file, corr_filename, vev_file, metadata)
 
 
 def _read_correlators_binary(
