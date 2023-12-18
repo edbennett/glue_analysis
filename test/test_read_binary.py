@@ -26,15 +26,25 @@ def header() -> dict[str, int]:
     return {name: i + 1 for i, name in enumerate(HEADER_NAMES)}
 
 
+OFFSET_FOR_1_INDEXING = 1
+
+
 def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.DataFrame:
     index_ranges = [
-        range(1, header["Nbin"] + 1),
-        range(1, header["Nop"] * header["Nbl"] + 1),
+        range(OFFSET_FOR_1_INDEXING, header["Nbin"] + OFFSET_FOR_1_INDEXING),
+        range(
+            OFFSET_FOR_1_INDEXING, header["Nop"] * header["Nbl"] + OFFSET_FOR_1_INDEXING
+        ),
     ]
     if not vev:
         index_ranges += [
-            range(1, header["Nop"] * header["Nbl"] + 1),
-            range(1, int(header["LT"] / 2 + 1) + 1),
+            range(
+                OFFSET_FOR_1_INDEXING,
+                header["Nop"] * header["Nbl"] + OFFSET_FOR_1_INDEXING,
+            ),
+            range(
+                OFFSET_FOR_1_INDEXING, int(header["LT"] / 2 + 1) + OFFSET_FOR_1_INDEXING
+            ),
         ]
     return pd.MultiIndex.from_product(
         index_ranges,
