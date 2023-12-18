@@ -29,6 +29,10 @@ def header() -> dict[str, int]:
 OFFSET_FOR_1_INDEXING = 1
 
 
+def _correlator_length(length_in_time: int) -> int:
+    return int(length_in_time / 2 + 1)
+
+
 def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.DataFrame:
     index_ranges = [
         range(OFFSET_FOR_1_INDEXING, header["Nbin"] + OFFSET_FOR_1_INDEXING),
@@ -43,7 +47,8 @@ def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.Data
                 header["Nop"] * header["Nbl"] + OFFSET_FOR_1_INDEXING,
             ),
             range(
-                OFFSET_FOR_1_INDEXING, int(header["LT"] / 2 + 1) + OFFSET_FOR_1_INDEXING
+                OFFSET_FOR_1_INDEXING,
+                _correlator_length(header["LT"]) + OFFSET_FOR_1_INDEXING,
             ),
         ]
     return pd.MultiIndex.from_product(
