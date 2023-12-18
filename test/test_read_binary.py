@@ -33,7 +33,7 @@ def _correlator_length(length_in_time: int) -> int:
     return int(length_in_time / 2 + 1)
 
 
-def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.DataFrame:
+def index_from_header(header: dict[str, int], *, vev: bool = False) -> pd.MultiIndex:
     index_ranges = [
         range(OFFSET_FOR_1_INDEXING, header["Nbin"] + OFFSET_FOR_1_INDEXING),
         range(
@@ -58,7 +58,7 @@ def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.Data
 
 
 def create_data(header: dict[str, int], *, vev: bool = False) -> np.array:
-    return np.random.random(columns_from_header(header, vev=vev).shape[0])
+    return np.random.random(index_from_header(header, vev=vev).shape[0])
 
 
 @pytest.fixture()
@@ -192,7 +192,7 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_
     answer = _read_correlators_binary(
         corr_file, filename, vev_file=create_file(header, vev_data)
     )
-    assert (answer.vevs.index == columns_from_header(header, vev=True)).all().all()
+    assert (answer.vevs.index == index_from_header(header, vev=True)).all().all()
 
 
 def test_read_correlators_binary_preserves_data_in_vev(
@@ -221,7 +221,7 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
     assert (
-        (answer.correlators.index == columns_from_header(header, vev=False)).all().all()
+        (answer.correlators.index == index_from_header(header, vev=False)).all().all()
     )
 
 

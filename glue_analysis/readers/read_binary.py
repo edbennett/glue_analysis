@@ -57,13 +57,13 @@ def _read_correlators_binary(
     correlators.metadata = _assemble_metadata(corr_file, metadata)
     correlators.correlators = _read(
         corr_file,
-        _columns_from_header(correlators.metadata, CORRELATOR_INDEXING_COLUMNS),
+        _index_from_header(correlators.metadata, CORRELATOR_INDEXING_COLUMNS),
         CORRELATOR_VALUE_COLUMN_NAME,
     )
     if vev_file:
         correlators.vevs = _read(
             vev_file,
-            _columns_from_header(correlators.metadata, VEV_INDEXING_COLUMNS),
+            _index_from_header(correlators.metadata, VEV_INDEXING_COLUMNS),
             VEV_VALUE_COLUMN_NAME,
         )
 
@@ -131,7 +131,7 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
     return header
 
 
-def _columns_from_header(header: dict[str, int], columns: list[str]) -> pd.MultiIndex:
+def _index_from_header(header: dict[str, int], columns: list[str]) -> pd.MultiIndex:
     return pd.MultiIndex.from_product(
         [
             range(1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1)
