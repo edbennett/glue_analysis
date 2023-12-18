@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -6,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from glue_analysis.auxiliary import NUMBERS, NoneContext
-from glue_analysis.correlator import CorrelatorEnsemble
+from glue_analysis.correlator import CorrelatorEnsemble, concatenate
 
 LENGTH_OF_CORRELATOR_INDEXING = {
     "MC_Time": lambda header: header["Nbin"],
@@ -32,16 +34,53 @@ class ParsingError(Exception):
     pass
 
 
+def _handle_filenames_types(
+    filenames: Any,  # noqa: ANN401
+    # more precisely this should be two @overload's
+    # one taking None and returning Generator[None, None, None]
+    # and one taking Any (not None) and returning Iterable[Path]
+) -> Iterable[Path] | Generator[None, None, None]:
+    if filenames is None:
+        return generate_none()
+    if isinstance(filenames, os.PathLike | str):
+        filenames = Path(filenames)
+        return [filenames]
+    return filenames
+
+
+def generate_none() -> Generator[None, None, None]:
+    while True:
+        yield None
+
+
 def read_correlators_binary(
-    corr_filename: str,
-    vev_filename: str | None = None,
+    corr_filenames: str | os.PathLike | Iterable[str | os.PathLike],
+    vev_filenames: str | os.PathLike | Iterable[str | os.PathLike] | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> CorrelatorEnsemble:  # pragma: no cover
+    return concatenate(
+        # the first one is never None
+        read_correlator_binary(corr_filename, vev_filename, metadata)  # type: ignore[arg-type]
+        for corr_filename, vev_filename in zip(
+            _handle_filenames_types(corr_filenames),
+            _handle_filenames_types(vev_filenames),
+            strict=True,
+        )
+    )
+
+
+def read_correlator_binary(
+    corr_filename: Path,
+    vev_filename: Path | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
     with Path(corr_filename).open("rb") as corr_file, (
         # typechecking fails on @contextmanager
         Path(vev_filename).open("rb") if vev_filename else NoneContext()  # type: ignore[attr-defined]
     ) as vev_file:
-        return _read_correlators_binary(corr_file, corr_filename, vev_file, metadata)
+        return _read_correlators_binary(
+            corr_file, str(corr_filename), vev_file, metadata
+        )
 
 
 def _read_correlators_binary(
