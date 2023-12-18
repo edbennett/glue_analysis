@@ -15,6 +15,7 @@ from glue_analysis.correlator import (
     DataInconsistencyError,
     FrozenError,
     VEVData,
+    concatenate,
     to_obs_array,
 )
 
@@ -540,3 +541,17 @@ def test_correlator_ensemble_freezing_without_validation_still_performs_typechec
     unfrozen_corr_ensemble.correlators = "rubbish that would fail validation"
     with pytest.raises(TypeError):
         unfrozen_corr_ensemble.freeze(perform_expensive_validation=False)
+
+
+### concatenate
+
+
+def test_concatenate_raises_on_empty_argument() -> None:
+    message = "You must give at least one correlator ensemble."
+    with pytest.raises(ValueError, match=message):
+        concatenate([])
+
+
+def test_concatenate_returns_element_if_single_element_is_given() -> None:
+    element = CorrelatorEnsemble("unimportant-filename")
+    assert concatenate([element]) is element

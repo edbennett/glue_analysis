@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections.abc import Iterable
 from typing import Any, Self
 
 import numpy as np
@@ -260,3 +261,13 @@ def to_obs_array(array: np.array, ensemble_name: str) -> pe.Obs:
             for sub_array in np.moveaxis(array, 1, 0)
         ]
     )
+
+
+def concatenate(
+    corr_ensembles: Iterable[CorrelatorEnsemble],
+) -> CorrelatorEnsemble:
+    try:
+        return next(iter(corr_ensembles))
+    except StopIteration as exc:
+        message = "You must give at least one correlator ensemble."
+        raise ValueError(message) from exc
