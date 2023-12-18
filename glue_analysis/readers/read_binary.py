@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-from collections.abc import Generator
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, BinaryIO
 
 import numpy as np
 import pandas as pd
 
-from glue_analysis.auxiliary import NUMBERS
+from glue_analysis.auxiliary import NUMBERS, NoneContext
 from glue_analysis.correlator import CorrelatorEnsemble
 
 LENGTH_OF_CORRELATOR_INDEXING = {
@@ -32,11 +30,6 @@ HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
 
 class ParsingError(Exception):
     pass
-
-
-@contextmanager
-def NoneContext() -> Generator[None, None, None]:
-    yield
 
 
 def read_correlators_binary(

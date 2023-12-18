@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from collections.abc import Generator
-from contextlib import contextmanager
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
@@ -8,12 +6,8 @@ from typing import Any, TextIO
 
 import pandas as pd
 
+from glue_analysis.auxiliary import NoneContext
 from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
-
-
-@contextmanager
-def NoneContext() -> Generator[None, None, None]:
-    yield
 
 
 @lru_cache(maxsize=8)
@@ -25,9 +19,7 @@ def read_correlators_fortran(
 ) -> CorrelatorEnsemble:  # pragma: no cover
     with Path(corr_filename).open("r") as corr_file, (
         # typechecking fails on @contextmanager
-        Path(vev_filename).open("r")
-        if vev_filename
-        else NoneContext()  # type: ignore[attr-defined]
+        Path(vev_filename).open("r") if vev_filename else NoneContext()  # type: ignore[attr-defined]
     ) as vev_file:
         return _read_correlators_fortran(
             corr_file, corr_filename, channel, vev_file, metadata
