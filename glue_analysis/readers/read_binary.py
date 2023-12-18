@@ -4,28 +4,25 @@ from typing import Any, BinaryIO
 
 import numpy as np
 import pandas as pd
-from pandera.typing import DataFrame as DataFrameType
 
-from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
+from glue_analysis.auxiliary import NUMBERS
+from glue_analysis.correlator import CorrelatorEnsemble
 
 LENGTH_OF_CORRELATOR_INDEXING = {
     "MC_Time": lambda header: header["Nbin"],
     "Blocking_index": lambda header: header["Nbl"],
-    "Internal": lambda header: header["Nop"],
+    "Internal": lambda header: header["Nop"] * header["Nbl"],
     "Time": lambda header: int(header["LT"] / 2 + 1),
 }
 CORRELATOR_INDEXING_COLUMNS = [
     "MC_Time",
-    "Blocking_index1",
     "Internal1",
-    "Blocking_index2",
     "Internal2",
     "Time",
 ]
-NUMBERS = "0123456789"
 CORRELATOR_VALUE_COLUMN_NAME = "Correlation"
 VEV_VALUE_COLUMN_NAME = "Vac_exp"
-VEV_INDEXING_COLUMNS = ["MC_Time", "Blocking_index", "Internal"]
+VEV_INDEXING_COLUMNS = ["MC_Time", "Internal"]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
 HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
@@ -58,56 +55,36 @@ def _read_correlators_binary(
 ) -> CorrelatorEnsemble:
     correlators = CorrelatorEnsemble(filename)
     correlators.metadata = _assemble_metadata(corr_file, metadata)
-    correlators.correlators = _make_compliant_correlator_data(
-        _read(
-            corr_file,
-            _columns_from_header(correlators.metadata, CORRELATOR_INDEXING_COLUMNS),
-            CORRELATOR_VALUE_COLUMN_NAME,
-        )
+    correlators.correlators = _read(
+        corr_file,
+        _index_from_header(correlators.metadata, CORRELATOR_INDEXING_COLUMNS),
+        CORRELATOR_VALUE_COLUMN_NAME,
     )
     if vev_file:
-        correlators.vevs = _make_compliant_vevs_data(
-            _read(
-                vev_file,
-                _columns_from_header(correlators.metadata, VEV_INDEXING_COLUMNS),
-                VEV_VALUE_COLUMN_NAME,
-            )
+        correlators.vevs = _read(
+            vev_file,
+            _index_from_header(correlators.metadata, VEV_INDEXING_COLUMNS),
+            VEV_VALUE_COLUMN_NAME,
         )
-    return correlators.freeze()
 
-
-def _make_compliant_vevs_data(
-    vevs: pd.DataFrame,
-) -> DataFrameType[VEVData]:
-    return vevs.assign(
-        Internal=list(vevs[["Internal", "Blocking_index"]].itertuples(index=False))
-    ).drop("Blocking_index", axis="columns")
-
-
-def _make_compliant_correlator_data(
-    correlators: pd.DataFrame,
-) -> DataFrameType[CorrelatorData]:
-    return correlators.assign(
-        Internal1=list(
-            correlators[["Internal1", "Blocking_index1"]].itertuples(index=False)
-        ),
-        Internal2=list(
-            correlators[["Internal2", "Blocking_index2"]].itertuples(index=False)
-        ),
-    ).drop(["Blocking_index1", "Blocking_index2"], axis="columns")
+    return correlators.freeze(perform_expensive_validation=False)
 
 
 def _read(
     file: BinaryIO,
     # could be more precise, i.e., only indexing portion of
     # DataFrameType[CorrelatorData | VEVData]:
-    correlators: pd.DataFrame,
+    index: pd.MultiIndex,
     value_column_name: str,
 ) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
-    correlators[value_column_name] = (
-        # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
-        np.frombuffer(file.read(), dtype=np.float64)
+    correlators = pd.DataFrame(
+        {
+            value_column_name:
+            # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
+            np.frombuffer(file.read(), dtype=np.float64)
+        },
+        index=index,
     )
     file.seek(0)
     return correlators
@@ -154,17 +131,11 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
     return header
 
 
-def _columns_from_header(header: dict[str, int], columns: list[str]) -> pd.DataFrame:
-    return (
-        pd.MultiIndex.from_product(
-            [
-                range(
-                    1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1
-                )
-                for column in columns
-            ],
-            names=columns,
-        )
-        .to_frame()
-        .reset_index(drop=True)
+def _index_from_header(header: dict[str, int], columns: list[str]) -> pd.MultiIndex:
+    return pd.MultiIndex.from_product(
+        [
+            range(1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1)
+            for column in columns
+        ],
+        names=columns,
     )

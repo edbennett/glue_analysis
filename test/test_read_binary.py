@@ -26,56 +26,39 @@ def header() -> dict[str, int]:
     return {name: i + 1 for i, name in enumerate(HEADER_NAMES)}
 
 
-def columns_from_header(header: dict[str, int], *, vev: bool = False) -> pd.DataFrame:
+OFFSET_FOR_1_INDEXING = 1
+
+
+def _correlator_length(length_in_time: int) -> int:
+    return int(length_in_time / 2 + 1)
+
+
+def index_from_header(header: dict[str, int], *, vev: bool = False) -> pd.MultiIndex:
     index_ranges = [
-        range(1, header["Nbin"] + 1),  # Bin_index
-        range(1, header["Nbl"] + 1),  # Blocking_index1
-        range(1, header["Nop"] + 1),  # Op_index1
+        range(OFFSET_FOR_1_INDEXING, header["Nbin"] + OFFSET_FOR_1_INDEXING),
+        range(
+            OFFSET_FOR_1_INDEXING, header["Nop"] * header["Nbl"] + OFFSET_FOR_1_INDEXING
+        ),
     ]
     if not vev:
         index_ranges += [
-            range(1, header["Nbl"] + 1),  # Blocking_index2
-            range(1, header["Nop"] + 1),  # Op_index2
-            range(1, int(header["LT"] / 2 + 1) + 1),  # Time
+            range(
+                OFFSET_FOR_1_INDEXING,
+                header["Nop"] * header["Nbl"] + OFFSET_FOR_1_INDEXING,
+            ),
+            range(
+                OFFSET_FOR_1_INDEXING,
+                _correlator_length(header["LT"]) + OFFSET_FOR_1_INDEXING,
+            ),
         ]
-    ungrouped_columns = (
-        pd.MultiIndex.from_product(
-            index_ranges,
-            names=VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS,
-        )
-        .to_frame()
-        .reset_index(drop=True)
-    )
-    if vev:
-        assignments = {
-            "Internal": list(
-                ungrouped_columns[["Internal", "Blocking_index"]].itertuples(
-                    index=False
-                )
-            )
-        }
-    else:
-        assignments = {
-            "Internal1": list(
-                ungrouped_columns[["Internal1", "Blocking_index1"]].itertuples(
-                    index=False
-                )
-            ),
-            "Internal2": list(
-                ungrouped_columns[["Internal2", "Blocking_index2"]].itertuples(
-                    index=False
-                )
-            ),
-        }
-    return ungrouped_columns.assign(**assignments).drop(
-        ["Blocking_index", "Blocking_index1", "Blocking_index2"],
-        errors="ignore",
-        axis="columns",
+    return pd.MultiIndex.from_product(
+        index_ranges,
+        names=VEV_INDEXING_COLUMNS if vev else CORRELATOR_INDEXING_COLUMNS,
     )
 
 
 def create_data(header: dict[str, int], *, vev: bool = False) -> np.array:
-    return np.random.random(columns_from_header(header, vev=vev).shape[0])
+    return np.random.random(index_from_header(header, vev=vev).shape[0])
 
 
 @pytest.fixture()
@@ -209,11 +192,7 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_
     answer = _read_correlators_binary(
         corr_file, filename, vev_file=create_file(header, vev_data)
     )
-    assert (
-        (answer.vevs[["MC_Time", "Internal"]] == columns_from_header(header, vev=True))
-        .all()
-        .all()
-    )
+    assert (answer.vevs.index == index_from_header(header, vev=True)).all().all()
 
 
 def test_read_correlators_binary_preserves_data_in_vev(
@@ -241,11 +220,8 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
-    columns = ["MC_Time", "Time", "Internal1", "Internal2"]
     assert (
-        (answer.correlators[columns] == columns_from_header(header, vev=False)[columns])
-        .all()
-        .all()
+        (answer.correlators.index == index_from_header(header, vev=False)).all().all()
     )
 
 

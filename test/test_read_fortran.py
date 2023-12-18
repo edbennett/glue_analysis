@@ -58,7 +58,9 @@ def some_numbers() -> np.ndarray:
 
 @pytest.fixture()
 def vev_df(some_numbers: np.ndarray) -> pd.DataFrame:
-    return pd.DataFrame({"MC_Time": [1, 1, 1, 1, 1], "Vac_exp": some_numbers})
+    return pd.DataFrame(
+        {"MC_Time": [1, 1, 1, 1, 1], "Vac_exp": some_numbers}
+    ).set_index("MC_Time", append=False)
 
 
 @pytest.fixture()
@@ -145,7 +147,10 @@ def test_read_correlators_fortran_correctly_names_columns(
     full_file: TextIO, filename: str
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert set(answer.correlators.columns) == {*CorrelatorData.columns, "channel"}
+    assert set(answer.correlators.index.names) == {
+        *CorrelatorData.index.get_metadata()[None]["columns"]
+    }
+    assert set(answer.correlators.columns) == {"Correlation", "channel"}
 
 
 def test_read_correlators_fortran_correctly_names_vev_columns(
@@ -157,14 +162,19 @@ def test_read_correlators_fortran_correctly_names_vev_columns(
     answer = _read_correlators_fortran(
         full_file, filename, vev_file=vev_file, metadata=vev_metadata
     )
-    assert set(answer.vevs.columns) == {*VEVData.columns, "channel"}
+    assert set(answer.vevs.index.names) == {
+        *VEVData.index.get_metadata()[None]["columns"]
+    }
+    assert set(answer.vevs.columns) == {"Vac_exp", "channel"}
 
 
 def test_read_correlators_fortran_preserves_data(
     full_file: TextIO, filename: str, data: np.array
 ) -> None:
     answer = _read_correlators_fortran(full_file, filename)
-    assert (answer.correlators.drop("channel", axis=1).to_numpy() == data).all()
+    assert (
+        answer.correlators.drop("channel", axis=1).to_numpy().ravel() == data[:, -1]
+    ).all()
 
 
 def test_read_correlators_fortran_preserves_normalised_data_in_vev(
@@ -190,7 +200,8 @@ def test_read_correlators_fortran_preserves_normalised_data_in_vev(
     normalised_vev_data[:, -1] /= normalisation
 
     assert (
-        answer.vevs.drop("channel", axis="columns").to_numpy() == normalised_vev_data
+        answer.vevs.drop("channel", axis="columns").to_numpy().ravel()
+        == normalised_vev_data[:, -1]
     ).all()
 
 

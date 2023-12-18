@@ -8,6 +8,8 @@ import pandera as pa
 import pyerrors as pe
 from pandera.typing import DataFrame as DataFrameType
 
+from glue_analysis.auxiliary import NUMBERS
+
 _COLUMN_DESCRIPTIONS = {
     #
     "MC_Time": "Index enumerating the Monte Carlo samples.",
@@ -28,63 +30,52 @@ _CHECK_DESCRIPTIONS = {
     #
     "Check_Internals_equal": "Internal1 and Internal2 are supposed to form"
     "square matrix, so they must be identical up to reordering.",
-    #
-    "Check_unique_indexing": "The index columns are supposed "
-    "to make for a unique index.",
 }
 CorrelatorData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(
-            int, required=True, description=_COLUMN_DESCRIPTIONS["MC_Time"]
-        ),
-        "Time": pa.Column(int, required=True, description=_COLUMN_DESCRIPTIONS["Time"]),
-        "Internal1": pa.Column(
-            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
-        ),
-        "Internal2": pa.Column(
-            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
-        ),
         "Correlation": pa.Column(
             float, required=True, description=_COLUMN_DESCRIPTIONS["Correlation"]
         ),
     },
+    index=pa.MultiIndex(
+        [
+            pa.Index(
+                int,
+                description=_COLUMN_DESCRIPTIONS[column.strip(NUMBERS)],
+                name=column,
+            )
+            for column in ("MC_Time", "Internal1", "Internal2", "Time")
+        ],
+        strict=True,
+        ordered=False,
+        unique=["MC_Time", "Internal1", "Internal2", "Time"],
+    ),
     checks=[
         pa.Check(
             lambda df: (
-                df["Internal1"].sort_values().to_numpy()
-                == df["Internal2"].sort_values().to_numpy()
+                df.index.get_level_values("Internal1").sort_values()
+                == df.index.get_level_values("Internal2").sort_values()
             ).all(),
             description=_CHECK_DESCRIPTIONS["Check_Internals_equal"],
             name="Check_Internals_equal",
-        ),
-        pa.Check(
-            lambda df: not df[["MC_Time", "Time", "Internal1", "Internal2"]]
-            .duplicated()
-            .any(),
-            description=_CHECK_DESCRIPTIONS["Check_unique_indexing"],
-            name="Check_unique_indexing",
         ),
     ],
 )
 VEVData = pa.DataFrameSchema(
     {
-        "MC_Time": pa.Column(
-            int, required=True, description=_COLUMN_DESCRIPTIONS["MC_Time"]
-        ),
-        "Internal": pa.Column(
-            required=True, description=_COLUMN_DESCRIPTIONS["Internal"]
-        ),
         "Vac_exp": pa.Column(
             float, required=True, description=_COLUMN_DESCRIPTIONS["Vac_exp"]
         ),
     },
-    checks=[
-        pa.Check(
-            lambda df: not df[["MC_Time", "Internal"]].duplicated().any(),
-            description=_CHECK_DESCRIPTIONS["Check_unique_indexing"],
-            name="Check_unique_indexing",
-        ),
-    ],
+    index=pa.MultiIndex(
+        [
+            pa.Index(int, description=_COLUMN_DESCRIPTIONS[column], name=column)
+            for column in ("MC_Time", "Internal")
+        ],
+        strict=True,
+        ordered=False,
+        unique=["MC_Time", "Internal"],
+    ),
 )
 
 
@@ -99,19 +90,40 @@ class DataInconsistencyError(Exception):
 def cross_validate(
     corr: DataFrameType[CorrelatorData], vevs: DataFrameType[VEVData]
 ) -> None:
-    if not (
-        # It's sufficient to check this one way round (and not with Internal1/2
-        # interchanged) because their consistency is assured from other checks.
-        corr.groupby(by=["Time", "Internal2"]).apply(
-            lambda df: sorted(df[["MC_Time", "Internal1"]].to_numpy().tolist())
-            == sorted(vevs[["MC_Time", "Internal"]].to_numpy().tolist())
-        )
-    ).all():
-        message = (
-            "VEVs and correlators have differing MC_Time and Internal axes. "
-            "Are they coming from the same ensemble?"
-        )
-        raise DataInconsistencyError(message)
+    vevs_idx = vevs.index.sort_values()
+    try:
+        if not (
+            # It's sufficient to check this one way round (and not with Internal1/2
+            # interchanged) because their consistency is assured from other checks.
+            corr.groupby(by=["Internal2", "Time"]).apply(
+                lambda df: (
+                    df.index.droplevel(["Internal2", "Time"]).sort_values() == vevs_idx
+                ).all()
+            )
+        ).all():
+            message = (
+                "VEVs and correlators have differing MC_Time and Internal axes. "
+                "Are they coming from the same ensemble?"
+            )
+            raise DataInconsistencyError(message)
+    except ValueError as ex:
+        message = "Vevs and correlators are of different length."
+        raise DataInconsistencyError(message) from ex
+
+
+def validate(schema: pa.DataFrameSchema, data: DataFrameType) -> None:
+    message = (
+        "Non-unique index, "
+        "should be pa.errors.SchemaError but fails due to some incompatibility."
+    )
+    try:
+        schema.validate(data)
+    except ValueError as ex:
+        if "Columns with duplicate values are not supported" in str(ex):
+            # see https://github.com/unionai-oss/pandera/issues/1328
+            raise ValueError(message) from ex
+        # if this happens, it's an exceptional situation we can't test:
+        raise  # pragma: no cover
 
 
 class CorrelatorEnsemble:
@@ -130,7 +142,7 @@ class CorrelatorEnsemble:
         self.filename = filename
         self.ensemble_name = ensemble_name if ensemble_name else "glue_bins"
 
-    def freeze(self: Self) -> Self:
+    def _type_validation(self: Self) -> None:
         if not isinstance(self._correlators, pd.DataFrame):
             message = (
                 "Correlator data is expected to be pandas.Dataframe "
@@ -145,10 +157,16 @@ class CorrelatorEnsemble:
             )
             raise TypeError(message)
 
-        CorrelatorData.validate(self._correlators)
+    def _data_validation(self: Self) -> None:
+        validate(CorrelatorData, self._correlators)
         if hasattr(self, "_vevs"):
-            VEVData.validate(self._vevs)
+            validate(VEVData, self._vevs)
             cross_validate(self._correlators, self._vevs)
+
+    def freeze(self: Self, *, perform_expensive_validation: bool = True) -> Self:
+        self._type_validation()
+        if perform_expensive_validation:
+            self._data_validation()
         self._frozen = True
         return self
 
@@ -191,15 +209,15 @@ class CorrelatorEnsemble:
 
     @property
     def num_timeslices(self: Self) -> int:
-        return len(set(self._correlators.Time))
+        return len(self._correlators.index.unique("Time"))
 
     @property
     def num_internal(self: Self) -> int:
-        return len(set(self._correlators.Internal1))
+        return len(self._correlators.index.unique("Internal1"))
 
     @property
     def num_samples(self: Self) -> int:
-        return len(set(self._correlators.MC_Time))
+        return len(self._correlators.index.unique("MC_Time"))
 
     def get_numpy(self: Self) -> np.array:
         sorted_correlators = self._correlators.sort_values(
