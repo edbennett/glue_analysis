@@ -2,7 +2,7 @@
 import os
 from collections.abc import Generator, Iterable
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -34,21 +34,26 @@ class ParsingError(Exception):
     pass
 
 
-def _handle_filenames_types(
-    filenames: Any,  # noqa: ANN401
+T = TypeVar("T")
+
+
+def _handle_types(
+    elements: Any,  # noqa: ANN401
+    value_types: Any,  # noqa: ANN401
+    target_type: T,
     # more precisely this should be two @overload's
     # one taking None and returning Generator[None, None, None]
     # and one taking Any (not None) and returning Iterable[Path]
-) -> Iterable[Path] | Generator[None, None, None]:
-    if filenames is None:
+) -> Iterable[T] | Generator[None, None, None]:  # pragma: no cover
+    if elements is None:
         return generate_none()
-    if isinstance(filenames, os.PathLike | str):
-        filenames = Path(filenames)
-        return [filenames]
-    return filenames
+    if isinstance(elements, value_types):
+        elements = target_type(elements)  # type: ignore[operator]
+        return [elements]
+    return elements
 
 
-def generate_none() -> Generator[None, None, None]:
+def generate_none() -> Generator[None, None, None]:  # pragma: no cover
     while True:
         yield None
 
@@ -56,15 +61,16 @@ def generate_none() -> Generator[None, None, None]:
 def read_correlators_binary(
     corr_filenames: str | os.PathLike | Iterable[str | os.PathLike],
     vev_filenames: str | os.PathLike | Iterable[str | os.PathLike] | None = None,
-    metadata: dict[str, Any] | None = None,
+    metadata_sets: dict[str, Any] | Iterable[dict[str, Any]] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
     return concatenate(
         [
             # the first one is never None
             read_correlator_binary(corr_filename, vev_filename, metadata)  # type: ignore[arg-type]
-            for corr_filename, vev_filename in zip(
-                _handle_filenames_types(corr_filenames),
-                _handle_filenames_types(vev_filenames),
+            for corr_filename, vev_filename, metadata in zip(
+                _handle_types(corr_filenames, str | os.PathLike, Path),
+                _handle_types(vev_filenames, str | os.PathLike, Path),
+                _handle_types(metadata_sets, dict, dict[str, Any]),
                 strict=vev_filenames is not None,
             )
         ]
@@ -148,7 +154,7 @@ def _read(
                 f"but the header suggested that it should be {index.shape[0]}."
             )
             raise ValueError(message) from exc
-        raise
+        raise  # pragma: no cover
     file.seek(0)
     return correlators
 
