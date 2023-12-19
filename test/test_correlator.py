@@ -674,3 +674,19 @@ def test_concatenate_raises_on_inconsistent_vevs(
     del multiple_corr_ensembles[1]._vevs  # noqa: SLF001
     with pytest.raises(ValueError, match="Some but not all VEVs exist."):
         concatenate(multiple_corr_ensembles)
+
+
+def test_concatenate_is_fine_with_not_finding_metadata(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    assert not hasattr(concatenate(multiple_corr_ensembles), "metadata")
+
+
+def test_concatenate_preserves_first_metadata(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    multiple_corr_ensembles[0].metadata = {"some": "thing"}
+    assert (
+        concatenate(multiple_corr_ensembles).metadata
+        == multiple_corr_ensembles[0].metadata
+    )

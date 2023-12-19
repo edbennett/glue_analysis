@@ -273,6 +273,8 @@ def concatenate(
     new_instance = CorrelatorEnsemble(
         corr_ensembles[0].filename, corr_ensembles[0].ensemble_name
     )
+    if hasattr(corr_ensembles[0], "metadata"):
+        new_instance.metadata = corr_ensembles[0].metadata
     new_instance._correlators = pd.concat(  # noqa: SLF001
         ensemble.correlators for ensemble in corr_ensembles
     )
