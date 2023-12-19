@@ -270,7 +270,9 @@ def concatenate(
         raise ValueError(message)
     if len(corr_ensembles) == 1:
         return corr_ensembles[0]
-    new_instance = CorrelatorEnsemble("as", "df")
+    new_instance = CorrelatorEnsemble(
+        corr_ensembles[0].filename, corr_ensembles[0].ensemble_name
+    )
     new_instance._correlators = pd.concat(  # noqa: SLF001
         ensemble.correlators for ensemble in corr_ensembles
     )

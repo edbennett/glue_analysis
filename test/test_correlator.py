@@ -572,3 +572,31 @@ def test_concatenate_concatenates_data_from_two_ensembles(
         .all()
         .all()
     )
+
+
+def test_concatenate_preserves_first_filename(
+    frozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    second_ensemble = deepcopy(frozen_corr_ensemble)
+    second_ensemble.filename = "unimportant-other-name"
+    # just to make sure and be explicit:
+    assert frozen_corr_ensemble.filename != second_ensemble.filename
+
+    assert (
+        concatenate([frozen_corr_ensemble, second_ensemble]).filename
+        == frozen_corr_ensemble.filename
+    )
+
+
+def test_concatenate_preserves_first_ensemble_name(
+    frozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    second_ensemble = deepcopy(frozen_corr_ensemble)
+    second_ensemble.ensemble_name = "unimportant-other-name"
+    # just to make sure and be explicit:
+    assert frozen_corr_ensemble.ensemble_name != second_ensemble.ensemble_name
+
+    assert (
+        concatenate([frozen_corr_ensemble, second_ensemble]).ensemble_name
+        == frozen_corr_ensemble.ensemble_name
+    )
