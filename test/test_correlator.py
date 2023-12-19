@@ -77,6 +77,26 @@ def unfrozen_corr_ensemble(
     return create_corr_ensemble(filename, corr_data, vev_data, frozen=False)
 
 
+@pytest.fixture()
+def multiple_corr_ensembles(
+    frozen_corr_ensemble: CorrelatorEnsemble,
+) -> list[CorrelatorEnsemble]:
+    second_ensemble = deepcopy(frozen_corr_ensemble)
+    second_ensemble._frozen = False  # noqa: SLF001
+    second_ensemble.correlators = (
+        second_ensemble.correlators.reset_index(level="MC_Time", drop=True)
+        .assign(
+            MC_Time=range(
+                second_ensemble.correlators.shape[0],
+                2 * second_ensemble.correlators.shape[0],
+            )
+        )
+        .set_index("MC_Time", append=True)
+        .reorder_levels(frozen_corr_ensemble.correlators.index.names)
+    )
+    return [frozen_corr_ensemble, second_ensemble]
+
+
 def create_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData, *, frozen: bool
 ) -> CorrelatorEnsemble:
@@ -559,15 +579,12 @@ def test_concatenate_returns_element_if_single_element_is_given() -> None:
 
 
 def test_concatenate_concatenates_data_from_two_ensembles(
-    frozen_corr_ensemble: CorrelatorEnsemble,
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
 ) -> None:
-    second_ensemble = deepcopy(frozen_corr_ensemble)
     assert (
         (
-            concatenate([frozen_corr_ensemble, second_ensemble]).correlators
-            == pd.concat(
-                [frozen_corr_ensemble.correlators, second_ensemble.correlators]
-            )
+            concatenate(multiple_corr_ensembles).correlators
+            == pd.concat(ensemble.correlators for ensemble in multiple_corr_ensembles)
         )
         .all()
         .all()
@@ -575,28 +592,35 @@ def test_concatenate_concatenates_data_from_two_ensembles(
 
 
 def test_concatenate_preserves_first_filename(
-    frozen_corr_ensemble: CorrelatorEnsemble,
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
 ) -> None:
-    second_ensemble = deepcopy(frozen_corr_ensemble)
-    second_ensemble.filename = "unimportant-other-name"
+    multiple_corr_ensembles[1].filename = "unimportant-other-name"
     # just to make sure and be explicit:
-    assert frozen_corr_ensemble.filename != second_ensemble.filename
+    assert multiple_corr_ensembles[0].filename != multiple_corr_ensembles[1].filename
 
     assert (
-        concatenate([frozen_corr_ensemble, second_ensemble]).filename
-        == frozen_corr_ensemble.filename
+        concatenate(multiple_corr_ensembles).filename
+        == multiple_corr_ensembles[0].filename
     )
 
 
 def test_concatenate_preserves_first_ensemble_name(
-    frozen_corr_ensemble: CorrelatorEnsemble,
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
 ) -> None:
-    second_ensemble = deepcopy(frozen_corr_ensemble)
-    second_ensemble.ensemble_name = "unimportant-other-name"
+    multiple_corr_ensembles[1].ensemble_name = "unimportant-other-name"
     # just to make sure and be explicit:
-    assert frozen_corr_ensemble.ensemble_name != second_ensemble.ensemble_name
+    assert (
+        multiple_corr_ensembles[0].ensemble_name
+        != multiple_corr_ensembles[1].ensemble_name
+    )
 
     assert (
-        concatenate([frozen_corr_ensemble, second_ensemble]).ensemble_name
-        == frozen_corr_ensemble.ensemble_name
+        concatenate(multiple_corr_ensembles).ensemble_name
+        == multiple_corr_ensembles[0].ensemble_name
     )
+
+
+def test_concatenate_freezes(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    assert concatenate(multiple_corr_ensembles).frozen

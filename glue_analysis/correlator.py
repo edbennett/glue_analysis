@@ -276,4 +276,4 @@ def concatenate(
     new_instance._correlators = pd.concat(  # noqa: SLF001
         ensemble.correlators for ensemble in corr_ensembles
     )
-    return new_instance
+    return new_instance.freeze()
