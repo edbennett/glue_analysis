@@ -137,7 +137,7 @@ def _read(
             length = np.frombuffer(file.read(), dtype=np.float64).shape[0]
             message = (
                 f"Inconsistent header: The file content has length {length} "
-                "but the header suggested that it should be {index.shape[0]}."
+                f"but the header suggested that it should be {index.shape[0]}."
             )
             raise ValueError(message) from exc
         raise
