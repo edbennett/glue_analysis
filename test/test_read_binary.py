@@ -230,3 +230,21 @@ def test_read_correlators_binary_preserves_data(
 ) -> None:
     answer = _read_correlators_binary(corr_file, filename)
     assert (answer.correlators["Correlation"] == data).all()
+
+
+def test_read_correlators_binary_raises_on_inconsistent_file(
+    corr_file: BinaryIO, filename: str
+) -> None:
+    corr_file.truncate(104)  # now it's shorter than the header promises
+    with pytest.raises(ValueError, match="Inconsistent header"):
+        _read_correlators_binary(corr_file, filename)
+
+
+def test_read_correlators_binary_raises_on_corrupted_data(
+    corr_file: BinaryIO, filename: str
+) -> None:
+    corr_file.truncate(
+        103
+    )  # last number is corrupted (too few bytes to be read as float64)
+    with pytest.raises(ValueError, match="Corrupted data"):
+        _read_correlators_binary(corr_file, filename)

@@ -114,14 +114,31 @@ def _read(
     value_column_name: str,
 ) -> pd.DataFrame:
     file.seek(HEADER_LENGTH)
-    correlators = pd.DataFrame(
-        {
-            value_column_name:
-            # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
-            np.frombuffer(file.read(), dtype=np.float64)
-        },
-        index=index,
-    )
+    try:
+        correlators = pd.DataFrame(
+            {
+                value_column_name:
+                # Should be np.fromfile but workaround for https://github.com/numpy/numpy/issues/2230
+                np.frombuffer(file.read(), dtype=np.float64)
+            },
+            index=index,
+        )
+    except ValueError as exc:
+        if "buffer size must be a multiple of element size" in str(exc):
+            message = (
+                "Corrupted data: The file has the wrong number of bytes "
+                "to be read as header + array of float64."
+            )
+            raise ValueError(message) from exc
+        if "does not match length of index" in str(exc):
+            file.seek(HEADER_LENGTH)
+            length = np.frombuffer(file.read(), dtype=np.float64).shape[0]
+            message = (
+                f"Inconsistent header: The file content has length {length} "
+                "but the header suggested that it should be {index.shape[0]}."
+            )
+            raise ValueError(message) from exc
+        raise
     file.seek(0)
     return correlators
 
