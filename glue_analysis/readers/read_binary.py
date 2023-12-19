@@ -59,13 +59,15 @@ def read_correlators_binary(
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
     return concatenate(
-        # the first one is never None
-        read_correlator_binary(corr_filename, vev_filename, metadata)  # type: ignore[arg-type]
-        for corr_filename, vev_filename in zip(
-            _handle_filenames_types(corr_filenames),
-            _handle_filenames_types(vev_filenames),
-            strict=True,
-        )
+        [
+            # the first one is never None
+            read_correlator_binary(corr_filename, vev_filename, metadata)  # type: ignore[arg-type]
+            for corr_filename, vev_filename in zip(
+                _handle_filenames_types(corr_filenames),
+                _handle_filenames_types(vev_filenames),
+                strict=True,
+            )
+        ]
     )
 
 
