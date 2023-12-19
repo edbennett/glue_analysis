@@ -12,7 +12,7 @@ from glue_analysis.readers.read_binary import (
     HEADER_NAMES,
     VEV_INDEXING_COLUMNS,
     ParsingError,
-    _read_correlators_binary,
+    _read_correlator_binary,
 )
 
 
@@ -109,21 +109,21 @@ def trivial_vevs() -> pd.DataFrame:
 def test_read_correlators_binary_records_filename(
     corr_file: BinaryIO, filename: str
 ) -> None:
-    answer = _read_correlators_binary(corr_file, filename)
+    answer = _read_correlator_binary(corr_file, filename)
     assert answer.filename == filename
 
 
 def test_read_correlators_binary_does_not_create_vev_if_not_given(
     corr_file: BinaryIO, filename: str
 ) -> None:
-    answer = _read_correlators_binary(corr_file, filename)
+    answer = _read_correlator_binary(corr_file, filename)
     assert not hasattr(answer, "vevs")
 
 
 def test_read_correlators_binary_freezes_the_ensemble(
     corr_file: BinaryIO, filename: str
 ) -> None:
-    answer = _read_correlators_binary(corr_file, filename)
+    answer = _read_correlator_binary(corr_file, filename)
     assert answer.frozen
 
 
@@ -137,7 +137,7 @@ def test_read_correlators_binary_makes_metadata_from_header_constant(
 ) -> None:
     header = {name: 1 for name in HEADER_NAMES}
     corr_file = create_file(header, create_data(header))
-    answer = _read_correlators_binary(corr_file, filename)
+    answer = _read_correlator_binary(corr_file, filename)
     assert answer.metadata == header
 
 
@@ -146,7 +146,7 @@ def test_read_correlators_binary_makes_metadata_from_header_rising(
 ) -> None:
     header = {name: i for i, name in enumerate(HEADER_NAMES)}
     corr_file = create_file(header, create_data(header))
-    answer = _read_correlators_binary(corr_file, filename)
+    answer = _read_correlator_binary(corr_file, filename)
     assert answer.metadata == header
 
 
@@ -154,7 +154,7 @@ def test_read_correlators_binary_merges_header_with_metadata(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
     metadata = {"some": "metadata"}
-    answer = _read_correlators_binary(corr_file, filename, metadata=metadata)
+    answer = _read_correlator_binary(corr_file, filename, metadata=metadata)
     assert answer.metadata == header | metadata
 
 
@@ -163,14 +163,14 @@ def test_read_correlators_binary_raises_on_conflicting_metadata(
 ) -> None:
     metadata = {HEADER_NAMES[0]: "conflict with header info"}
     with pytest.raises(ParsingError):
-        _read_correlators_binary(corr_file, filename, metadata=metadata)
+        _read_correlator_binary(corr_file, filename, metadata=metadata)
 
 
 def test_read_correlators_binary_accepts_consistently_doubly_specified_metadata(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
     metadata = {HEADER_NAMES[0]: header[HEADER_NAMES[0]]}
-    answer = _read_correlators_binary(corr_file, filename, metadata=metadata)
+    answer = _read_correlator_binary(corr_file, filename, metadata=metadata)
     assert answer.metadata == header
 
 
@@ -180,7 +180,7 @@ def test_read_correlators_binary_accepts_consistently_doubly_specified_metadata(
 def test_read_correlators_binary_has_correct_columns_in_vev(
     corr_file: BinaryIO, filename: str, vev_file: BinaryIO
 ) -> None:
-    answer = _read_correlators_binary(corr_file, filename, vev_file=vev_file)
+    answer = _read_correlator_binary(corr_file, filename, vev_file=vev_file)
     assert set(answer.vevs.columns) == set(
         VEVData.get_metadata()[None]["columns"].keys()
     )
@@ -189,7 +189,7 @@ def test_read_correlators_binary_has_correct_columns_in_vev(
 def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_vev(
     corr_file: BinaryIO, filename: str, vev_data: np.array, header: dict[str, int]
 ) -> None:
-    answer = _read_correlators_binary(
+    answer = _read_correlator_binary(
         corr_file, filename, vev_file=create_file(header, vev_data)
     )
     assert (answer.vevs.index == index_from_header(header, vev=True)).all().all()
@@ -198,7 +198,7 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_
 def test_read_correlators_binary_takes_user_specified_mc_time_in_vevs(
     corr_file: BinaryIO, filename: str, vev_data: np.array, header: dict[str, int]
 ) -> None:
-    answer = _read_correlators_binary(
+    answer = _read_correlator_binary(
         corr_file,
         filename,
         vev_file=create_file(header, vev_data),
@@ -212,7 +212,7 @@ def test_read_correlators_binary_takes_user_specified_mc_time_in_vevs(
 def test_read_correlators_binary_preserves_data_in_vev(
     corr_file: BinaryIO, filename: str, header: dict[str, int], vev_data: np.array
 ) -> None:
-    answer = _read_correlators_binary(
+    answer = _read_correlator_binary(
         corr_file, filename, vev_file=create_file(header, vev_data)
     )
     assert (answer.vevs["Vac_exp"] == vev_data).all()
@@ -224,7 +224,7 @@ def test_read_correlators_binary_preserves_data_in_vev(
 def test_read_correlators_binary_has_correct_columns(
     corr_file: BinaryIO, filename: str
 ) -> None:
-    answer = _read_correlators_binary(corr_file, filename)
+    answer = _read_correlator_binary(corr_file, filename)
     assert set(answer.correlators.columns) == set(
         CorrelatorData.get_metadata()[None]["columns"].keys()
     )
@@ -233,7 +233,7 @@ def test_read_correlators_binary_has_correct_columns(
 def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
     corr_file: BinaryIO, filename: str, header: dict[str, int]
 ) -> None:
-    answer = _read_correlators_binary(corr_file, filename)
+    answer = _read_correlator_binary(corr_file, filename)
     assert (
         (answer.correlators.index == index_from_header(header, vev=False)).all().all()
     )
@@ -242,7 +242,7 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
 def test_read_correlators_binary_takes_user_specified_mc_time(
     corr_file: BinaryIO, filename: str, vev_data: np.array, header: dict[str, int]
 ) -> None:
-    answer = _read_correlators_binary(
+    answer = _read_correlator_binary(
         corr_file,
         filename,
         vev_file=create_file(header, vev_data),
@@ -256,7 +256,7 @@ def test_read_correlators_binary_takes_user_specified_mc_time(
 def test_read_correlators_binary_preserves_data(
     corr_file: BinaryIO, filename: str, data: np.array
 ) -> None:
-    answer = _read_correlators_binary(corr_file, filename)
+    answer = _read_correlator_binary(corr_file, filename)
     assert (answer.correlators["Correlation"] == data).all()
 
 
@@ -265,7 +265,7 @@ def test_read_correlators_binary_raises_on_inconsistent_file(
 ) -> None:
     corr_file.truncate(104)  # now it's shorter than the header promises
     with pytest.raises(ValueError, match="Inconsistent header"):
-        _read_correlators_binary(corr_file, filename)
+        _read_correlator_binary(corr_file, filename)
 
 
 def test_read_correlators_binary_raises_on_corrupted_data(
@@ -275,4 +275,4 @@ def test_read_correlators_binary_raises_on_corrupted_data(
         103
     )  # last number is corrupted (too few bytes to be read as float64)
     with pytest.raises(ValueError, match="Corrupted data"):
-        _read_correlators_binary(corr_file, filename)
+        _read_correlator_binary(corr_file, filename)

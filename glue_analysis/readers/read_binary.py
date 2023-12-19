@@ -77,12 +77,12 @@ def read_correlator_binary(
         # typechecking fails on @contextmanager
         Path(vev_filename).open("rb") if vev_filename else NoneContext()  # type: ignore[attr-defined]
     ) as vev_file:
-        return _read_correlators_binary(
+        return _read_correlator_binary(
             corr_file, str(corr_filename), vev_file, metadata
         )
 
 
-def _read_correlators_binary(
+def _read_correlator_binary(
     corr_file: BinaryIO,
     filename: str,
     vev_file: BinaryIO | None = None,
