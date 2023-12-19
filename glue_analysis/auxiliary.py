@@ -5,6 +5,10 @@ from contextlib import contextmanager
 NUMBERS = "0123456789"
 
 
+class ParsingError(Exception):
+    pass
+
+
 @contextmanager
 def NoneContext() -> Generator[None, None, None]:  # pragma: no cover
     yield

@@ -7,7 +7,7 @@ from typing import Any, BinaryIO, TypeVar
 import numpy as np
 import pandas as pd
 
-from glue_analysis.auxiliary import NUMBERS, NoneContext, NoneGenerator
+from glue_analysis.auxiliary import NUMBERS, NoneContext, NoneGenerator, ParsingError
 from glue_analysis.correlator import CorrelatorEnsemble, concatenate
 
 LENGTH_OF_CORRELATOR_INDEXING = {
@@ -28,10 +28,6 @@ VEV_INDEXING_COLUMNS = ["MC_Time", "Internal"]
 HEADER_NAMES = ["LX", "LY", "LZ", "LT", "Nc", "Nbin", "bin_size", "Nop", "Nbl"]
 SIZE_OF_FLOAT = 8
 HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
-
-
-class ParsingError(Exception):
-    pass
 
 
 T = TypeVar("T")
