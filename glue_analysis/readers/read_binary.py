@@ -7,7 +7,7 @@ from typing import Any, BinaryIO, TypeVar
 import numpy as np
 import pandas as pd
 
-from glue_analysis.auxiliary import NUMBERS, NoneContext
+from glue_analysis.auxiliary import NUMBERS, NoneContext, NoneGenerator
 from glue_analysis.correlator import CorrelatorEnsemble, concatenate
 
 LENGTH_OF_CORRELATOR_INDEXING = {
@@ -46,16 +46,11 @@ def _handle_types(
     # and one taking Any (not None) and returning Iterable[Path]
 ) -> Iterable[T] | Generator[None, None, None]:  # pragma: no cover
     if elements is None:
-        return generate_none()
+        return NoneGenerator()
     if isinstance(elements, value_types):
         elements = target_type(elements)  # type: ignore[operator]
         return [elements]
     return elements
-
-
-def generate_none() -> Generator[None, None, None]:  # pragma: no cover
-    while True:
-        yield None
 
 
 def read_correlators_binary(
