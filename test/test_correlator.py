@@ -666,3 +666,11 @@ def test_concatenate_can_handle_missing_vev_data(
         .all()
         .all()
     )
+
+
+def test_concatenate_raises_on_inconsistent_vevs(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    del multiple_corr_ensembles[1]._vevs  # noqa: SLF001
+    with pytest.raises(ValueError, match="Some but not all VEVs exist."):
+        concatenate(multiple_corr_ensembles)

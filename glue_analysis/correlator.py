@@ -276,7 +276,12 @@ def concatenate(
     new_instance._correlators = pd.concat(  # noqa: SLF001
         ensemble.correlators for ensemble in corr_ensembles
     )
-    if hasattr(corr_ensembles[0], "_vevs"):
+    if any(vevs_exist := [hasattr(ensemble, "_vevs") for ensemble in corr_ensembles]):
+        if not all(vevs_exist):
+            message = (
+                "Inconsistent ensembles to concatenate: Some but not all VEVs exist."
+            )
+            raise ValueError(message)
         new_instance._vevs = pd.concat(  # noqa: SLF001
             ensemble.vevs for ensemble in corr_ensembles
         )
