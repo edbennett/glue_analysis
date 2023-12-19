@@ -195,6 +195,20 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header_in_
     assert (answer.vevs.index == index_from_header(header, vev=True)).all().all()
 
 
+def test_read_correlators_binary_takes_user_specified_mc_time_in_vevs(
+    corr_file: BinaryIO, filename: str, vev_data: np.array, header: dict[str, int]
+) -> None:
+    answer = _read_correlators_binary(
+        corr_file,
+        filename,
+        vev_file=create_file(header, vev_data),
+        metadata={"MC_Time": [-(i + 1) for i in range(header["Nbin"])]},
+    )
+    index = index_from_header(header, vev=True).to_frame()
+    index["MC_Time"] *= -1
+    assert (answer.vevs.index == pd.MultiIndex.from_frame(index)).all().all()
+
+
 def test_read_correlators_binary_preserves_data_in_vev(
     corr_file: BinaryIO, filename: str, header: dict[str, int], vev_data: np.array
 ) -> None:
@@ -223,6 +237,20 @@ def test_read_correlators_binary_has_indexing_columns_consistent_with_header(
     assert (
         (answer.correlators.index == index_from_header(header, vev=False)).all().all()
     )
+
+
+def test_read_correlators_binary_takes_user_specified_mc_time(
+    corr_file: BinaryIO, filename: str, vev_data: np.array, header: dict[str, int]
+) -> None:
+    answer = _read_correlators_binary(
+        corr_file,
+        filename,
+        vev_file=create_file(header, vev_data),
+        metadata={"MC_Time": [-(i + 1) for i in range(header["Nbin"])]},
+    )
+    index = index_from_header(header, vev=False).to_frame()
+    index["MC_Time"] *= -1
+    assert (answer.correlators.index == pd.MultiIndex.from_frame(index)).all().all()
 
 
 def test_read_correlators_binary_preserves_data(

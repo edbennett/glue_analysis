@@ -95,13 +95,21 @@ def _read_correlators_binary(
     correlators.metadata = _assemble_metadata(corr_file, metadata)
     correlators.correlators = _read(
         corr_file,
-        _index_from_header(correlators.metadata, CORRELATOR_INDEXING_COLUMNS),
+        _index_from_header(
+            correlators.metadata,
+            CORRELATOR_INDEXING_COLUMNS,
+            correlators.metadata.get("MC_Time", None),
+        ),
         CORRELATOR_VALUE_COLUMN_NAME,
     )
     if vev_file:
         correlators.vevs = _read(
             vev_file,
-            _index_from_header(correlators.metadata, VEV_INDEXING_COLUMNS),
+            _index_from_header(
+                correlators.metadata,
+                VEV_INDEXING_COLUMNS,
+                correlators.metadata.get("MC_Time", None),
+            ),
             VEV_VALUE_COLUMN_NAME,
         )
 
@@ -186,11 +194,13 @@ def _read_header(corr_file: BinaryIO) -> dict[str, int]:
     return header
 
 
-def _index_from_header(header: dict[str, int], columns: list[str]) -> pd.MultiIndex:
-    return pd.MultiIndex.from_product(
-        [
-            range(1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1)
-            for column in columns
-        ],
-        names=columns,
-    )
+def _index_from_header(
+    header: dict[str, int], columns: list[str], mc_time: list[int] | None = None
+) -> pd.MultiIndex:
+    individual_values: list[Any] = [
+        range(1, LENGTH_OF_CORRELATOR_INDEXING[column.strip(NUMBERS)](header) + 1)
+        for column in columns
+    ]
+    if mc_time is not None:
+        individual_values[0] = mc_time
+    return pd.MultiIndex.from_product(individual_values, names=columns)
