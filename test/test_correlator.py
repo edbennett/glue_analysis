@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from copy import deepcopy
 from typing import Any
 
 import numpy as np
@@ -555,3 +556,19 @@ def test_concatenate_raises_on_empty_argument() -> None:
 def test_concatenate_returns_element_if_single_element_is_given() -> None:
     element = CorrelatorEnsemble("unimportant-filename")
     assert concatenate([element]) is element
+
+
+def test_concatenate_concatenates_data_from_two_ensembles(
+    frozen_corr_ensemble: CorrelatorEnsemble,
+) -> None:
+    second_ensemble = deepcopy(frozen_corr_ensemble)
+    assert (
+        (
+            concatenate([frozen_corr_ensemble, second_ensemble]).correlators
+            == pd.concat(
+                [frozen_corr_ensemble.correlators, second_ensemble.correlators]
+            )
+        )
+        .all()
+        .all()
+    )

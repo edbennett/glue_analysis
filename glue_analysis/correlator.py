@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from collections.abc import Iterable
 from typing import Any, Self
 
 import numpy as np
@@ -264,10 +263,15 @@ def to_obs_array(array: np.array, ensemble_name: str) -> pe.Obs:
 
 
 def concatenate(
-    corr_ensembles: Iterable[CorrelatorEnsemble],
+    corr_ensembles: list[CorrelatorEnsemble],
 ) -> CorrelatorEnsemble:
-    try:
-        return next(iter(corr_ensembles))
-    except StopIteration as exc:
+    if len(corr_ensembles) == 0:
         message = "You must give at least one correlator ensemble."
-        raise ValueError(message) from exc
+        raise ValueError(message)
+    if len(corr_ensembles) == 1:
+        return corr_ensembles[0]
+    new_instance = CorrelatorEnsemble("as", "df")
+    new_instance._correlators = pd.concat(  # noqa: SLF001
+        ensemble.correlators for ensemble in corr_ensembles
+    )
+    return new_instance
