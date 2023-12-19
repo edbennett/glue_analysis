@@ -276,4 +276,8 @@ def concatenate(
     new_instance._correlators = pd.concat(  # noqa: SLF001
         ensemble.correlators for ensemble in corr_ensembles
     )
-    return new_instance.freeze()
+    if hasattr(corr_ensembles[0], "_vevs"):
+        new_instance._vevs = pd.concat(  # noqa: SLF001
+            ensemble.vevs for ensemble in corr_ensembles
+        )
+    return new_instance

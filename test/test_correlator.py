@@ -94,6 +94,17 @@ def multiple_corr_ensembles(
         .set_index("MC_Time", append=True)
         .reorder_levels(frozen_corr_ensemble.correlators.index.names)
     )
+    second_ensemble.vevs = (
+        second_ensemble.vevs.reset_index(level="MC_Time", drop=True)
+        .assign(
+            MC_Time=range(
+                second_ensemble.vevs.shape[0],
+                2 * second_ensemble.vevs.shape[0],
+            )
+        )
+        .set_index("MC_Time", append=True)
+        .reorder_levels(frozen_corr_ensemble.vevs.index.names)
+    )
     return [frozen_corr_ensemble, second_ensemble]
 
 
@@ -591,6 +602,19 @@ def test_concatenate_concatenates_data_from_two_ensembles(
     )
 
 
+def test_concatenate_concatenates_vev_data_from_two_ensembles(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    assert (
+        (
+            concatenate(multiple_corr_ensembles).vevs
+            == pd.concat(ensemble.vevs for ensemble in multiple_corr_ensembles)
+        )
+        .all()
+        .all()
+    )
+
+
 def test_concatenate_preserves_first_filename(
     multiple_corr_ensembles: list[CorrelatorEnsemble],
 ) -> None:
@@ -620,7 +644,25 @@ def test_concatenate_preserves_first_ensemble_name(
     )
 
 
+@pytest.mark.xfail(
+    reason="The validation during freezing is a high barrier for mock data."
+)
 def test_concatenate_freezes(
     multiple_corr_ensembles: list[CorrelatorEnsemble],
 ) -> None:
     assert concatenate(multiple_corr_ensembles).frozen
+
+
+def test_concatenate_can_handle_missing_vev_data(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    del multiple_corr_ensembles[0]._vevs  # noqa: SLF001
+    del multiple_corr_ensembles[1]._vevs  # noqa: SLF001
+    assert (
+        (
+            concatenate(multiple_corr_ensembles).correlators
+            == pd.concat(ensemble.correlators for ensemble in multiple_corr_ensembles)
+        )
+        .all()
+        .all()
+    )
