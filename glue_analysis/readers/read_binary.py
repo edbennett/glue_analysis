@@ -65,7 +65,7 @@ def read_correlators_binary(
             for corr_filename, vev_filename in zip(
                 _handle_filenames_types(corr_filenames),
                 _handle_filenames_types(vev_filenames),
-                strict=True,
+                strict=vev_filenames is not None,
             )
         ]
     )
