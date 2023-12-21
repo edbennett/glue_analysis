@@ -268,11 +268,14 @@ def test_read_correlators_binary_raises_on_inconsistent_file(
         _read_correlator_binary(corr_file, filename)
 
 
+def corrupt_file(corr_file: BinaryIO) -> None:
+    # last number is corrupted (too few bytes to be read as float64) now:
+    corr_file.truncate(103)
+
+
 def test_read_correlators_binary_raises_on_corrupted_data(
     corr_file: BinaryIO, filename: str
 ) -> None:
-    corr_file.truncate(
-        103
-    )  # last number is corrupted (too few bytes to be read as float64)
+    corrupt_file(corr_file)
     with pytest.raises(ValueError, match="Corrupted data"):
         _read_correlator_binary(corr_file, filename)
