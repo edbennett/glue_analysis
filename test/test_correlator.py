@@ -593,26 +593,18 @@ def test_concatenate_concatenates_data_from_two_ensembles(
     multiple_corr_ensembles: list[CorrelatorEnsemble],
 ) -> None:
     assert (
-        (
-            concatenate(multiple_corr_ensembles).correlators
-            == pd.concat(ensemble.correlators for ensemble in multiple_corr_ensembles)
-        )
-        .all()
-        .all()
-    )
+        concatenate(multiple_corr_ensembles).correlators
+        == pd.concat(ensemble.correlators for ensemble in multiple_corr_ensembles)
+    ).all(axis=None)
 
 
 def test_concatenate_concatenates_vev_data_from_two_ensembles(
     multiple_corr_ensembles: list[CorrelatorEnsemble],
 ) -> None:
     assert (
-        (
-            concatenate(multiple_corr_ensembles).vevs
-            == pd.concat(ensemble.vevs for ensemble in multiple_corr_ensembles)
-        )
-        .all()
-        .all()
-    )
+        concatenate(multiple_corr_ensembles).vevs
+        == pd.concat(ensemble.vevs for ensemble in multiple_corr_ensembles)
+    ).all(axis=None)
 
 
 def test_concatenate_preserves_first_filename(
@@ -659,13 +651,9 @@ def test_concatenate_can_handle_missing_vev_data(
     del multiple_corr_ensembles[0]._vevs  # noqa: SLF001
     del multiple_corr_ensembles[1]._vevs  # noqa: SLF001
     assert (
-        (
-            concatenate(multiple_corr_ensembles).correlators
-            == pd.concat(ensemble.correlators for ensemble in multiple_corr_ensembles)
-        )
-        .all()
-        .all()
-    )
+        concatenate(multiple_corr_ensembles).correlators
+        == pd.concat(ensemble.correlators for ensemble in multiple_corr_ensembles)
+    ).all(axis=None)
 
 
 def test_concatenate_raises_on_inconsistent_vevs(
