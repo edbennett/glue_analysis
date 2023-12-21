@@ -33,7 +33,7 @@ HEADER_LENGTH = len(HEADER_NAMES) * SIZE_OF_FLOAT
 T = TypeVar("T")
 
 
-def _handle_types(
+def _normalise_argument_types(
     elements: Any,  # noqa: ANN401
     value_types: Any,  # noqa: ANN401
     target_type: T,
@@ -59,9 +59,9 @@ def read_correlators_binary(
             # the first one is never None
             read_correlator_binary(corr_filename, vev_filename, metadata)  # type: ignore[arg-type]
             for corr_filename, vev_filename, metadata in zip(
-                _handle_types(corr_filenames, str | os.PathLike, Path),
-                _handle_types(vev_filenames, str | os.PathLike, Path),
-                _handle_types(metadata_sets, dict, dict[str, Any]),
+                _normalise_argument_types(corr_filenames, str | os.PathLike, Path),
+                _normalise_argument_types(vev_filenames, str | os.PathLike, Path),
+                _normalise_argument_types(metadata_sets, dict, dict[str, Any]),
                 strict=vev_filenames is not None,
             )
         ]
