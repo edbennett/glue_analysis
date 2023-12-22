@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from copy import deepcopy
 from typing import Any
 
 import numpy as np
@@ -15,6 +16,7 @@ from glue_analysis.correlator import (
     DataInconsistencyError,
     FrozenError,
     VEVData,
+    concatenate,
     to_obs_array,
 )
 
@@ -73,6 +75,37 @@ def unfrozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
     return create_corr_ensemble(filename, corr_data, vev_data, frozen=False)
+
+
+@pytest.fixture()
+def multiple_corr_ensembles(
+    frozen_corr_ensemble: CorrelatorEnsemble,
+) -> list[CorrelatorEnsemble]:
+    second_ensemble = deepcopy(frozen_corr_ensemble)
+    second_ensemble._frozen = False  # noqa: SLF001
+    second_ensemble.correlators = (
+        second_ensemble.correlators.reset_index(level="MC_Time", drop=True)
+        .assign(
+            MC_Time=range(
+                second_ensemble.correlators.shape[0],
+                2 * second_ensemble.correlators.shape[0],
+            )
+        )
+        .set_index("MC_Time", append=True)
+        .reorder_levels(frozen_corr_ensemble.correlators.index.names)
+    )
+    second_ensemble.vevs = (
+        second_ensemble.vevs.reset_index(level="MC_Time", drop=True)
+        .assign(
+            MC_Time=range(
+                second_ensemble.vevs.shape[0],
+                2 * second_ensemble.vevs.shape[0],
+            )
+        )
+        .set_index("MC_Time", append=True)
+        .reorder_levels(frozen_corr_ensemble.vevs.index.names)
+    )
+    return [frozen_corr_ensemble, second_ensemble]
 
 
 def create_corr_ensemble(
@@ -540,3 +573,108 @@ def test_correlator_ensemble_freezing_without_validation_still_performs_typechec
     unfrozen_corr_ensemble.correlators = "rubbish that would fail validation"
     with pytest.raises(TypeError):
         unfrozen_corr_ensemble.freeze(perform_expensive_validation=False)
+
+
+### concatenate
+
+
+def test_concatenate_raises_on_empty_argument() -> None:
+    message = "You must give at least one correlator ensemble."
+    with pytest.raises(ValueError, match=message):
+        concatenate([])
+
+
+def test_concatenate_returns_element_if_single_element_is_given() -> None:
+    element = CorrelatorEnsemble("unimportant-filename")
+    assert concatenate([element]) is element
+
+
+def test_concatenate_concatenates_data_from_two_ensembles(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    assert (
+        concatenate(multiple_corr_ensembles).correlators
+        == pd.concat(ensemble.correlators for ensemble in multiple_corr_ensembles)
+    ).all(axis=None)
+
+
+def test_concatenate_concatenates_vev_data_from_two_ensembles(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    assert (
+        concatenate(multiple_corr_ensembles).vevs
+        == pd.concat(ensemble.vevs for ensemble in multiple_corr_ensembles)
+    ).all(axis=None)
+
+
+def test_concatenate_preserves_first_filename(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    multiple_corr_ensembles[1].filename = "unimportant-other-name"
+    # just to make sure and be explicit:
+    assert multiple_corr_ensembles[0].filename != multiple_corr_ensembles[1].filename
+
+    assert (
+        concatenate(multiple_corr_ensembles).filename
+        == multiple_corr_ensembles[0].filename
+    )
+
+
+def test_concatenate_preserves_first_ensemble_name(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    multiple_corr_ensembles[1].ensemble_name = "unimportant-other-name"
+    # just to make sure and be explicit:
+    assert (
+        multiple_corr_ensembles[0].ensemble_name
+        != multiple_corr_ensembles[1].ensemble_name
+    )
+
+    assert (
+        concatenate(multiple_corr_ensembles).ensemble_name
+        == multiple_corr_ensembles[0].ensemble_name
+    )
+
+
+@pytest.mark.xfail(
+    reason="The validation during freezing is a high barrier for mock data."
+)
+def test_concatenate_freezes(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    assert concatenate(multiple_corr_ensembles).frozen
+
+
+def test_concatenate_can_handle_missing_vev_data(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    del multiple_corr_ensembles[0]._vevs  # noqa: SLF001
+    del multiple_corr_ensembles[1]._vevs  # noqa: SLF001
+    assert (
+        concatenate(multiple_corr_ensembles).correlators
+        == pd.concat(ensemble.correlators for ensemble in multiple_corr_ensembles)
+    ).all(axis=None)
+
+
+def test_concatenate_raises_on_inconsistent_vevs(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    del multiple_corr_ensembles[1]._vevs  # noqa: SLF001
+    with pytest.raises(ValueError, match="Some but not all VEVs exist."):
+        concatenate(multiple_corr_ensembles)
+
+
+def test_concatenate_is_fine_with_not_finding_metadata(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    assert not hasattr(concatenate(multiple_corr_ensembles), "metadata")
+
+
+def test_concatenate_preserves_first_metadata(
+    multiple_corr_ensembles: list[CorrelatorEnsemble],
+) -> None:
+    multiple_corr_ensembles[0].metadata = {"some": "thing"}
+    assert (
+        concatenate(multiple_corr_ensembles).metadata
+        == multiple_corr_ensembles[0].metadata
+    )

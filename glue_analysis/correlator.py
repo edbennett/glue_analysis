@@ -260,3 +260,37 @@ def to_obs_array(array: np.array, ensemble_name: str) -> pe.Obs:
             for sub_array in np.moveaxis(array, 1, 0)
         ]
     )
+
+
+def _concatenate_without_checks(
+    corr_ensembles: list[CorrelatorEnsemble],
+) -> CorrelatorEnsemble:
+    new_instance = CorrelatorEnsemble(
+        corr_ensembles[0].filename, corr_ensembles[0].ensemble_name
+    )
+    new_instance._correlators = pd.concat(  # noqa: SLF001
+        ensemble.correlators for ensemble in corr_ensembles
+    )
+    if hasattr(corr_ensembles[0], "_vevs"):
+        new_instance._vevs = pd.concat(  # noqa: SLF001
+            ensemble.vevs for ensemble in corr_ensembles
+        )
+    if hasattr(corr_ensembles[0], "metadata"):
+        new_instance.metadata = corr_ensembles[0].metadata
+    return new_instance
+
+
+def concatenate(
+    corr_ensembles: list[CorrelatorEnsemble],
+) -> CorrelatorEnsemble:
+    if len(corr_ensembles) == 0:
+        message = "You must give at least one correlator ensemble."
+        raise ValueError(message)
+    if len(corr_ensembles) == 1:
+        return corr_ensembles[0]
+    if any(
+        vevs_exist := [hasattr(ensemble, "_vevs") for ensemble in corr_ensembles]
+    ) and not all(vevs_exist):
+        message = "Inconsistent ensembles to concatenate: Some but not all VEVs exist."
+        raise ValueError(message)
+    return _concatenate_without_checks(corr_ensembles)
