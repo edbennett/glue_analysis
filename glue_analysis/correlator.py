@@ -262,7 +262,7 @@ def to_obs_array(array: np.array, ensemble_name: str) -> pe.Obs:
     )
 
 
-def _concatenate_sane_ensembles(
+def _concatenate_without_checks(
     corr_ensembles: list[CorrelatorEnsemble],
 ) -> CorrelatorEnsemble:
     new_instance = CorrelatorEnsemble(
@@ -293,4 +293,4 @@ def concatenate(
     ) and not all(vevs_exist):
         message = "Inconsistent ensembles to concatenate: Some but not all VEVs exist."
         raise ValueError(message)
-    return _concatenate_sane_ensembles(corr_ensembles)
+    return _concatenate_without_checks(corr_ensembles)
