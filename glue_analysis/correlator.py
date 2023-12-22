@@ -262,6 +262,24 @@ def to_obs_array(array: np.array, ensemble_name: str) -> pe.Obs:
     )
 
 
+def _concatenate_sane_ensembles(
+    corr_ensembles: list[CorrelatorEnsemble],
+) -> CorrelatorEnsemble:
+    new_instance = CorrelatorEnsemble(
+        corr_ensembles[0].filename, corr_ensembles[0].ensemble_name
+    )
+    new_instance._correlators = pd.concat(  # noqa: SLF001
+        ensemble.correlators for ensemble in corr_ensembles
+    )
+    if hasattr(corr_ensembles[0], "_vevs"):
+        new_instance._vevs = pd.concat(  # noqa: SLF001
+            ensemble.vevs for ensemble in corr_ensembles
+        )
+    if hasattr(corr_ensembles[0], "metadata"):
+        new_instance.metadata = corr_ensembles[0].metadata
+    return new_instance
+
+
 def concatenate(
     corr_ensembles: list[CorrelatorEnsemble],
 ) -> CorrelatorEnsemble:
@@ -270,21 +288,9 @@ def concatenate(
         raise ValueError(message)
     if len(corr_ensembles) == 1:
         return corr_ensembles[0]
-    new_instance = CorrelatorEnsemble(
-        corr_ensembles[0].filename, corr_ensembles[0].ensemble_name
-    )
-    if hasattr(corr_ensembles[0], "metadata"):
-        new_instance.metadata = corr_ensembles[0].metadata
-    new_instance._correlators = pd.concat(  # noqa: SLF001
-        ensemble.correlators for ensemble in corr_ensembles
-    )
-    if any(vevs_exist := [hasattr(ensemble, "_vevs") for ensemble in corr_ensembles]):
-        if not all(vevs_exist):
-            message = (
-                "Inconsistent ensembles to concatenate: Some but not all VEVs exist."
-            )
-            raise ValueError(message)
-        new_instance._vevs = pd.concat(  # noqa: SLF001
-            ensemble.vevs for ensemble in corr_ensembles
-        )
-    return new_instance
+    if any(
+        vevs_exist := [hasattr(ensemble, "_vevs") for ensemble in corr_ensembles]
+    ) and not all(vevs_exist):
+        message = "Inconsistent ensembles to concatenate: Some but not all VEVs exist."
+        raise ValueError(message)
+    return _concatenate_sane_ensembles(corr_ensembles)
