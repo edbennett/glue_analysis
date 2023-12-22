@@ -11,7 +11,7 @@ class ParsingError(Exception):
 
 @contextmanager
 def NoneContext() -> Generator[None, None, None]:  # pragma: no cover
-    yield
+    yield None
 
 
 def NoneGenerator() -> Generator[None, None, None]:  # pragma: no cover
