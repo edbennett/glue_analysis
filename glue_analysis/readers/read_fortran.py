@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from copy import deepcopy
-from functools import lru_cache
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -10,7 +9,6 @@ from glue_analysis.auxiliary import NoneContext
 from glue_analysis.correlator import CorrelatorData, CorrelatorEnsemble, VEVData
 
 
-@lru_cache(maxsize=8)
 def read_correlators_fortran(
     corr_filename: str,
     channel: str = "",
