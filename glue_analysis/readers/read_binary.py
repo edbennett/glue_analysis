@@ -73,10 +73,13 @@ def read_correlator_binary(
     vev_filename: Path | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
-    with Path(corr_filename).open("rb") as corr_file, (
-        # typechecking fails on @contextmanager
-        Path(vev_filename).open("rb") if vev_filename else NoneContext()  # type: ignore[attr-defined]
-    ) as vev_file:
+    with (
+        Path(corr_filename).open("rb") as corr_file,
+        (
+            # typechecking fails on @contextmanager
+            Path(vev_filename).open("rb") if vev_filename else NoneContext()  # type: ignore[attr-defined]
+        ) as vev_file,
+    ):
         return _read_correlator_binary(
             corr_file, str(corr_filename), vev_file, metadata
         )
