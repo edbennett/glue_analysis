@@ -15,10 +15,13 @@ def read_correlators_fortran(
     vev_filename: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> CorrelatorEnsemble:  # pragma: no cover
-    with Path(corr_filename).open("r") as corr_file, (
-        # typechecking fails on @contextmanager
-        Path(vev_filename).open("r") if vev_filename else NoneContext()  # type: ignore[attr-defined]
-    ) as vev_file:
+    with (
+        Path(corr_filename).open("r") as corr_file,
+        (
+            # typechecking fails on @contextmanager
+            Path(vev_filename).open("r") if vev_filename else NoneContext()  # type: ignore[attr-defined]
+        ) as vev_file,
+    ):
         return _read_correlators_fortran(
             corr_file, corr_filename, channel, vev_file, metadata
         )

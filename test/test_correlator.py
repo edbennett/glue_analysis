@@ -179,10 +179,10 @@ def test_correlator_ensemble_reports_correct_num_internal_for_other_types(
 ) -> None:
     # This is a relict from the old data structure and needs updating when
     # un-skipping this test:
-    unfrozen_corr_ensemble.correlators[
-        ["Internal1", "Internal2"]
-    ] = unfrozen_corr_ensemble.correlators[["Internal1", "Internal2"]].map(
-        lambda x: (x**2, str(x))  # make a non-integer type
+    unfrozen_corr_ensemble.correlators[["Internal1", "Internal2"]] = (
+        unfrozen_corr_ensemble.correlators[["Internal1", "Internal2"]].map(
+            lambda x: (x**2, str(x))  # make a non-integer type
+        )
     )
     assert unfrozen_corr_ensemble.num_internal == LENGTH_INTERNAL
 
