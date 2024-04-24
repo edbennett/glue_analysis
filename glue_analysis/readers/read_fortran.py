@@ -30,7 +30,7 @@ def read_correlators_fortran(
 def _read_single_file(file_to_read: TextIO) -> pd.DataFrame:
     return pd.read_csv(
         file_to_read,
-        delim_whitespace=True,
+        sep=r"\s+",
         converters={
             "Bin_index": int,
             "Time": int,
