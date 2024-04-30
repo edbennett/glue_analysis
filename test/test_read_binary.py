@@ -58,7 +58,7 @@ def index_from_header(header: dict[str, int], *, vev: bool = False) -> pd.MultiI
 
 
 def create_data(header: dict[str, int], *, vev: bool = False) -> np.array:
-    return np.random.random(index_from_header(header, vev=vev).shape[0])
+    return np.random.default_rng().random(index_from_header(header, vev=vev).shape[0])
 
 
 @pytest.fixture()
