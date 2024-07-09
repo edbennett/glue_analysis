@@ -12,18 +12,21 @@ from glue_analysis.auxiliary import NUMBERS
 
 _COLUMN_DESCRIPTIONS = {
     "MC_Time": "Index enumerating the Monte Carlo samples.",
-    "Time": "Physical euclidean time coordinate "
-    "along which correlation is measured.",
-    "Internal": "Any further internal structure, e.g.,"
-    "an index enumerating interpolating operators, "
-    "a blocking or smearing level, "
-    "or any combination thereof.",
+    "Time": "Physical euclidean time coordinate along which correlation is measured.",
+    "Internal": (
+        "Any further internal structure, e.g., "
+        "an index enumerating interpolating operators, "
+        "a blocking or smearing level, "
+        "or any combination thereof."
+    ),
     "Correlation": "Measured values of the correlators.",
     "Vac_exp": "Measured values of the vacuum expectation values (VEVs).",
 }
 _CHECK_DESCRIPTIONS = {
-    "Check_Internals_equal": "Internal1 and Internal2 are supposed to form"
-    "square matrix, so they must be identical up to reordering.",
+    "Check_Internals_equal": (
+        "Internal1 and Internal2 are supposed to form a square matrix, "
+        "so they must be identical up to reordering."
+    ),
 }
 CorrelatorData = pa.DataFrameSchema(
     {
