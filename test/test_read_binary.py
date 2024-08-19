@@ -16,12 +16,12 @@ from glue_analysis.readers.read_binary import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def filename() -> str:
     return "testname.txt"
 
 
-@pytest.fixture()
+@pytest.fixture
 def header() -> dict[str, int]:
     return {name: i + 1 for i, name in enumerate(HEADER_NAMES)}
 
@@ -61,12 +61,12 @@ def create_data(header: dict[str, int], *, vev: bool = False) -> np.array:
     return np.random.default_rng().random(index_from_header(header, vev=vev).shape[0])
 
 
-@pytest.fixture()
+@pytest.fixture
 def data(header: dict[str, int]) -> np.array:
     return create_data(header)
 
 
-@pytest.fixture()
+@pytest.fixture
 def vev_data(header: dict[str, int]) -> np.array:
     return create_data(header, vev=True)
 
@@ -81,17 +81,17 @@ def create_file(header: dict[str, int], data: np.array) -> BytesIO:
     return memory_file
 
 
-@pytest.fixture()
+@pytest.fixture
 def corr_file(header: dict[str, int], data: np.array) -> BytesIO:
     return create_file(header, data)
 
 
-@pytest.fixture()
+@pytest.fixture
 def vev_file(header: dict[str, int], vev_data: np.array) -> BytesIO:
     return create_file(header, vev_data)
 
 
-@pytest.fixture()
+@pytest.fixture
 def trivial_vevs() -> pd.DataFrame:
     return pd.DataFrame(
         {

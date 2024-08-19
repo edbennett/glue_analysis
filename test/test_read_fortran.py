@@ -15,22 +15,22 @@ from glue_analysis.readers.read_fortran import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def filename() -> str:
     return "testname.txt"
 
 
-@pytest.fixture()
+@pytest.fixture
 def trivial_file() -> StringIO:
     return StringIO("column-name")
 
 
-@pytest.fixture()
+@pytest.fixture
 def columns() -> list[str]:
     return ["Bin_index", "Time", "Op1_index", "Op2_index", "Correlation"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def vev_columns() -> list[str]:
     return ["Bin_index", "Op_index", "Vac_exp"]
 
@@ -51,29 +51,29 @@ def create_data(columns: list[str]) -> np.array:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def some_numbers() -> np.ndarray:
     return np.arange(1, 6)
 
 
-@pytest.fixture()
+@pytest.fixture
 def vev_df(some_numbers: np.ndarray) -> pd.DataFrame:
     return pd.DataFrame(
         {"MC_Time": [1, 1, 1, 1, 1], "Vac_exp": some_numbers}
     ).set_index("MC_Time", append=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def data(columns: list[str]) -> np.array:
     return create_data(columns)
 
 
-@pytest.fixture()
+@pytest.fixture
 def vev_data(vev_columns: list[str]) -> np.array:
     return create_data(vev_columns)
 
 
-@pytest.fixture()
+@pytest.fixture
 def full_file(columns: list[str], data: np.array) -> StringIO:
     return create_full_file(columns, data)
 
@@ -88,7 +88,7 @@ def create_full_file(columns: list[str], data: np.array) -> StringIO:
     return StringIO(" ".join(columns) + "\n" + memory_file.read())
 
 
-@pytest.fixture()
+@pytest.fixture
 def vev_file(vev_columns: list[str]) -> StringIO:
     data = create_data(vev_columns)
     return create_full_file(vev_columns, data)
