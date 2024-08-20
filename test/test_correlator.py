@@ -28,7 +28,7 @@ VEV_DATA_LENGTH = LENGTH_MC_TIME * LENGTH_INTERNAL
 MC_TIME_AXIS = 0
 
 
-@pytest.fixture()
+@pytest.fixture
 def corr_data() -> CorrelatorData:
     return pd.DataFrame(
         {"Correlation": np.arange(CORRELATOR_DATA_LENGTH, dtype=float)},
@@ -44,12 +44,12 @@ def corr_data() -> CorrelatorData:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def filename() -> str:
     return "filename"
 
 
-@pytest.fixture()
+@pytest.fixture
 def vev_data() -> CorrelatorData:
     return pd.DataFrame(
         {"Vac_exp": np.arange(VEV_DATA_LENGTH, dtype=float)},
@@ -63,21 +63,21 @@ def vev_data() -> CorrelatorData:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def frozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
     return create_corr_ensemble(filename, corr_data, vev_data, frozen=True)
 
 
-@pytest.fixture()
+@pytest.fixture
 def unfrozen_corr_ensemble(
     filename: str, corr_data: CorrelatorData, vev_data: VEVData
 ) -> CorrelatorEnsemble:
     return create_corr_ensemble(filename, corr_data, vev_data, frozen=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def multiple_corr_ensembles(
     frozen_corr_ensemble: CorrelatorEnsemble,
 ) -> list[CorrelatorEnsemble]:
