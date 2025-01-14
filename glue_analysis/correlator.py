@@ -195,8 +195,7 @@ class CorrelatorEnsemble:
             self._vevs = value
         else:
             message = (
-                "This instance is frozen. "
-                "You are not allowed to modify vevs anymore."
+                "This instance is frozen. You are not allowed to modify vevs anymore."
             )
             raise FrozenError(message)
 
