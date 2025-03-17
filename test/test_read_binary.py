@@ -135,7 +135,7 @@ def test_read_correlators_binary_freezes_the_ensemble(
 def test_read_correlators_binary_makes_metadata_from_header_constant(
     filename: str,
 ) -> None:
-    header = {name: 1 for name in HEADER_NAMES}
+    header = dict.fromkeys(HEADER_NAMES, 1)
     corr_file = create_file(header, create_data(header))
     answer = _read_correlator_binary(corr_file, filename)
     assert answer.metadata == header
