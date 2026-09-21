@@ -137,7 +137,7 @@ class CorrelatorEnsemble:
 
     def __init__(self: Self, filename: str, ensemble_name: str | None = None) -> None:
         self.filename = filename
-        self.ensemble_name = ensemble_name if ensemble_name else "glue_bins"
+        self.ensemble_name = ensemble_name or "glue_bins"
 
     def _type_validation(self: Self) -> None:
         if not isinstance(self._correlators, pd.DataFrame):
